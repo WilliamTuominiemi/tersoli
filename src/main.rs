@@ -1,4 +1,5 @@
 use ratatui::{
+    crossterm::event::{self, Event, KeyCode, KeyEventKind},
     widgets::{Block, Widget, canvas::Canvas},
     *,
 };
@@ -32,6 +33,13 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
 
+            if event::poll(timeout)? {
+                match event::read()? {
+                    Event::Key(key) => self.handle_key_press(key),
+                    _ => (),
+                }
+            }
+
             if last_tick.elapsed() >= tick_rate {
                 self.on_tick();
                 last_tick = Instant::now();
@@ -52,5 +60,15 @@ impl App {
         Canvas::default()
             .block(Block::bordered().title("Card"))
             .paint(|_ctx| {})
+    }
+
+    fn handle_key_press(&mut self, key: event::KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Char('q') => self.exit = true,
+            _ => {}
+        }
     }
 }
