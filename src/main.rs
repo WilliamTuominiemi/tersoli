@@ -1,5 +1,6 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
+    layout::{Constraint, Layout},
     widgets::{Block, Widget, canvas::Canvas},
     *,
 };
@@ -53,12 +54,61 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self.card_canvas(), frame.area());
+        let horizontal_constraints: [Constraint; 7] = [Constraint::Percentage(14); 7];
+        let horizontal = Layout::horizontal(horizontal_constraints);
+
+        let vertical_constraints: [Constraint; 2] = [Constraint::Percentage(50); 2];
+        let vertical = Layout::vertical(vertical_constraints);
+
+        let [top, bottom] = vertical.areas(frame.area());
+        let [
+            stock,
+            first_empty,
+            second_empty,
+            spades,
+            hearts,
+            clubs,
+            diamonds,
+        ] = horizontal.areas(top);
+
+        let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
+
+        frame.render_widget(self.deck_canvas(), stock);
+        frame.render_widget(self.empty_canvas(), first_empty);
+        frame.render_widget(self.empty_canvas(), second_empty);
+        frame.render_widget(self.foundation_canvas(), spades);
+        frame.render_widget(self.foundation_canvas(), hearts);
+        frame.render_widget(self.foundation_canvas(), clubs);
+        frame.render_widget(self.foundation_canvas(), diamonds);
+
+        frame.render_widget(self.card_canvas(), first);
+        frame.render_widget(self.card_canvas(), second);
+        frame.render_widget(self.card_canvas(), third);
+        frame.render_widget(self.card_canvas(), fourth);
+        frame.render_widget(self.card_canvas(), fifth);
+        frame.render_widget(self.card_canvas(), sixth);
+        frame.render_widget(self.card_canvas(), seventh);
     }
 
     fn card_canvas(&self) -> impl Widget + '_ {
         Canvas::default()
             .block(Block::bordered().title("Card"))
+            .paint(|_ctx| {})
+    }
+
+    fn deck_canvas(&self) -> impl Widget + '_ {
+        Canvas::default()
+            .block(Block::bordered().title("Stock"))
+            .paint(|_ctx| {})
+    }
+
+    fn empty_canvas(&self) -> impl Widget + '_ {
+        Canvas::default().paint(|_ctx| {})
+    }
+
+    fn foundation_canvas(&self) -> impl Widget + '_ {
+        Canvas::default()
+            .block(Block::bordered().title("Foundation"))
             .paint(|_ctx| {})
     }
 
