@@ -1,9 +1,11 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
+    style::{Color, Style},
     widgets::{Block, Widget, canvas::Canvas},
     *,
 };
+use std::cmp;
 use std::time::{Duration, Instant};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,6 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct App {
     exit: bool,
     tick_count: u64,
+    selected: (i8, i8),
 }
 
 impl App {
@@ -23,6 +26,7 @@ impl App {
         Self {
             exit: false,
             tick_count: 0,
+            selected: (0, 0),
         }
     }
 
@@ -73,42 +77,60 @@ impl App {
 
         let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
-        frame.render_widget(self.deck_canvas(), stock);
-        frame.render_widget(self.empty_canvas(), first_empty);
-        frame.render_widget(self.empty_canvas(), second_empty);
-        frame.render_widget(self.foundation_canvas(), spades);
-        frame.render_widget(self.foundation_canvas(), hearts);
-        frame.render_widget(self.foundation_canvas(), clubs);
-        frame.render_widget(self.foundation_canvas(), diamonds);
+        frame.render_widget(self.deck_canvas((0, 0)), stock);
+        frame.render_widget(self.empty_canvas((1, 0)), first_empty);
+        frame.render_widget(self.empty_canvas((2, 0)), second_empty);
+        frame.render_widget(self.foundation_canvas((3, 0)), spades);
+        frame.render_widget(self.foundation_canvas((4, 0)), hearts);
+        frame.render_widget(self.foundation_canvas((5, 0)), clubs);
+        frame.render_widget(self.foundation_canvas((6, 0)), diamonds);
 
-        frame.render_widget(self.card_canvas(), first);
-        frame.render_widget(self.card_canvas(), second);
-        frame.render_widget(self.card_canvas(), third);
-        frame.render_widget(self.card_canvas(), fourth);
-        frame.render_widget(self.card_canvas(), fifth);
-        frame.render_widget(self.card_canvas(), sixth);
-        frame.render_widget(self.card_canvas(), seventh);
+        frame.render_widget(self.card_canvas((0, 1)), first);
+        frame.render_widget(self.card_canvas((1, 1)), second);
+        frame.render_widget(self.card_canvas((2, 1)), third);
+        frame.render_widget(self.card_canvas((3, 1)), fourth);
+        frame.render_widget(self.card_canvas((4, 1)), fifth);
+        frame.render_widget(self.card_canvas((5, 1)), sixth);
+        frame.render_widget(self.card_canvas((6, 1)), seventh);
     }
 
-    fn card_canvas(&self) -> impl Widget + '_ {
+    fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let selected = pos == self.selected;
+
         Canvas::default()
-            .block(Block::bordered().title("Card"))
+            .block(
+                Block::bordered()
+                    .title("Card")
+                    .border_style(Style::default().fg(if selected {
+                        Color::Red
+                    } else {
+                        Color::White
+                    })),
+            )
             .paint(|_ctx| {})
     }
 
-    fn deck_canvas(&self) -> impl Widget + '_ {
+    fn deck_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let selected = pos == self.selected;
+
         Canvas::default()
-            .block(Block::bordered().title("Stock"))
+            .block(Block::bordered().title("Stock").border_style(
+                Style::default().fg(if selected { Color::Red } else { Color::White }),
+            ))
             .paint(|_ctx| {})
     }
 
-    fn empty_canvas(&self) -> impl Widget + '_ {
+    fn empty_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         Canvas::default().paint(|_ctx| {})
     }
 
-    fn foundation_canvas(&self) -> impl Widget + '_ {
+    fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let selected = pos == self.selected;
+
         Canvas::default()
-            .block(Block::bordered().title("Foundation"))
+            .block(Block::bordered().title("Foundation").border_style(
+                Style::default().fg(if selected { Color::Red } else { Color::White }),
+            ))
             .paint(|_ctx| {})
     }
 
@@ -118,6 +140,27 @@ impl App {
         }
         match key.code {
             KeyCode::Char('q') => self.exit = true,
+            KeyCode::Left => {
+                self.selected.0 = cmp::min(cmp::max(0, self.selected.0 - 1), 6);
+                if self.selected == (2, 0) {
+                    self.selected = (0, 0);
+                }
+            }
+            KeyCode::Right => {
+                self.selected.0 = cmp::min(cmp::max(0, self.selected.0 + 1), 6);
+                if self.selected == (1, 0) {
+                    self.selected = (3, 0);
+                }
+            }
+            KeyCode::Up => {
+                self.selected.1 = cmp::min(cmp::max(0, self.selected.1 - 1), 1);
+                if self.selected == (1, 0) {
+                    self.selected = (0, 0);
+                } else if self.selected == (2, 0) {
+                    self.selected = (3, 0);
+                }
+            }
+            KeyCode::Down => self.selected.1 = cmp::min(cmp::max(0, self.selected.1 + 1), 1),
             _ => {}
         }
     }
