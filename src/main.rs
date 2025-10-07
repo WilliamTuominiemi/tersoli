@@ -81,6 +81,7 @@ struct App {
     selected: (i8, i8),
     stock: Stock,
     stock_face: Option<Card>,
+    cards: Vec<Vec<Option<Card>>>,
 }
 
 impl App {
@@ -91,6 +92,7 @@ impl App {
             selected: (0, 0),
             stock: Stock::new(),
             stock_face: None,
+            cards: vec![],
         }
     }
 
@@ -121,6 +123,15 @@ impl App {
 
     fn first_deal(&mut self) {
         self.stock_face = Some(self.stock.deal());
+
+        self.cards.clear();
+        for i in 0..7 {
+            let mut row = Vec::new();
+            for _j in 0..=i {
+                row.push(Some(self.stock.deal()));
+            }
+            self.cards.push(row);
+        }
     }
 
     fn on_tick(&mut self) {
@@ -167,29 +178,36 @@ impl App {
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let selected = pos == self.selected;
 
+        let card_amount = self.cards[pos.0 as usize].len();
+
+        let card = self.cards[pos.0 as usize][0];
+        let card_name: String = match card {
+            Some(card) => get_card(card.suit, card.card),
+            None => "Stock empty".to_string(),
+        };
+        let card_text = format!("Cards: {} | On top: {}", card_amount, card_name);
+
         Canvas::default()
-            .block(
-                Block::bordered()
-                    .title("Card")
-                    .border_style(Style::default().fg(if selected {
-                        Color::Red
-                    } else {
-                        Color::White
-                    })),
-            )
+            .block(Block::bordered().title(card_text).border_style(
+                Style::default().fg(if selected { Color::Red } else { Color::White }),
+            ))
             .paint(|_ctx| {})
     }
 
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let selected = pos == self.selected;
 
+        let card_amount = self.stock.cards.len();
+
         let card_name: String = match self.stock_face {
             Some(card) => get_card(card.suit, card.card),
             None => "Stock empty".to_string(),
         };
 
+        let card_text = format!("Cards: {} | On top: {}", card_amount, card_name);
+
         Canvas::default()
-            .block(Block::bordered().title(card_name).border_style(
+            .block(Block::bordered().title(card_text).border_style(
                 Style::default().fg(if selected { Color::Red } else { Color::White }),
             ))
             .paint(|_ctx| {})
