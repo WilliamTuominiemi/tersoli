@@ -16,6 +16,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app_result
 }
 
+fn get_card(suit: u8, card: u8) -> String {
+    let suit_str = match suit {
+        1 => "Spades".to_string(),
+        2 => "Hearts".to_string(),
+        3 => "Clubs".to_string(),
+        4 => "Diamonds".to_string(),
+        _ => "Error".to_string(),
+    };
+
+    let card_str = match card {
+        1 => "Ace".to_string(),
+        2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => card.to_string(),
+        11 => "Jack".to_string(),
+        12 => "Queen".to_string(),
+        13 => "King".to_string(),
+        _ => "Error".to_string(),
+    };
+
+    format!("{} of {}", card_str, suit_str)
+}
+
 #[derive(Copy, Clone)]
 struct Card {
     suit: u8,
@@ -59,6 +80,7 @@ struct App {
     tick_count: u64,
     selected: (i8, i8),
     stock: Stock,
+    stock_face: Option<Card>,
 }
 
 impl App {
@@ -68,12 +90,15 @@ impl App {
             tick_count: 0,
             selected: (0, 0),
             stock: Stock::new(),
+            stock_face: None,
         }
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
+
+        self.first_deal();
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -92,6 +117,10 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    fn first_deal(&mut self) {
+        self.stock_face = Some(self.stock.deal());
     }
 
     fn on_tick(&mut self) {
@@ -118,7 +147,7 @@ impl App {
 
         let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
-        frame.render_widget(self.deck_canvas((0, 0)), stock);
+        frame.render_widget(self.stock_canvas((0, 0)), stock);
         frame.render_widget(self.empty_canvas((1, 0)), first_empty);
         frame.render_widget(self.empty_canvas((2, 0)), second_empty);
         frame.render_widget(self.foundation_canvas((3, 0)), spades);
@@ -151,11 +180,16 @@ impl App {
             .paint(|_ctx| {})
     }
 
-    fn deck_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+    fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let selected = pos == self.selected;
 
+        let card_name: String = match self.stock_face {
+            Some(card) => get_card(card.suit, card.card),
+            None => "Stock empty".to_string(),
+        };
+
         Canvas::default()
-            .block(Block::bordered().title("Stock").border_style(
+            .block(Block::bordered().title(card_name).border_style(
                 Style::default().fg(if selected { Color::Red } else { Color::White }),
             ))
             .paint(|_ctx| {})
