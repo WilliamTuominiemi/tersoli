@@ -1,3 +1,4 @@
+use rand::prelude::*;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
@@ -15,18 +16,58 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app_result
 }
 
+#[derive(Copy, Clone)]
+struct Card {
+    suit: u8,
+    card: u8,
+}
+
+impl Card {
+    const fn new(suit: u8, card: u8) -> Self {
+        Self { suit, card }
+    }
+}
+
+struct Stock {
+    cards: Vec<Card>,
+    rng: ThreadRng,
+}
+
+impl Stock {
+    fn new() -> Self {
+        let mut new_stock = Vec::with_capacity(52);
+        for i in 1..=4 {
+            for j in 1..=13 {
+                new_stock.push(Card::new(i, j));
+            }
+        }
+        Self {
+            cards: new_stock,
+            rng: rand::rng(),
+        }
+    }
+
+    fn deal(&mut self) -> Card {
+        let index = self.rng.random_range(0..self.cards.len());
+        let card = self.cards.remove(index);
+        card
+    }
+}
+
 struct App {
     exit: bool,
     tick_count: u64,
     selected: (i8, i8),
+    stock: Stock,
 }
 
 impl App {
-    const fn new() -> Self {
+    fn new() -> Self {
         Self {
             exit: false,
             tick_count: 0,
             selected: (0, 0),
+            stock: Stock::new(),
         }
     }
 
