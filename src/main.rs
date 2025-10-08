@@ -79,6 +79,7 @@ struct App {
     exit: bool,
     tick_count: u64,
     selected: (i8, i8),
+    active: Option<(i8, i8)>,
     stock: Stock,
     stock_face: Option<Card>,
     cards: Vec<Vec<Option<Card>>>,
@@ -90,6 +91,7 @@ impl App {
             exit: false,
             tick_count: 0,
             selected: (0, 0),
+            active: None,
             stock: Stock::new(),
             stock_face: None,
             cards: vec![],
@@ -176,8 +178,6 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let selected = pos == self.selected;
-
         let card_amount = self.cards[pos.0 as usize].len();
 
         let card = self.cards[pos.0 as usize][0];
@@ -188,9 +188,11 @@ impl App {
         let card_text = format!("Hidden cards: {}", card_amount);
 
         Canvas::default()
-            .block(Block::bordered().title(card_text).border_style(
-                Style::default().fg(if selected { Color::Red } else { Color::White }),
-            ))
+            .block(
+                Block::bordered()
+                    .title(card_text)
+                    .border_style(self.canvas_style(pos)),
+            )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
@@ -199,8 +201,6 @@ impl App {
     }
 
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let selected = pos == self.selected;
-
         let card_amount = self.stock.cards.len() + 1;
 
         let card_name: String = match self.stock_face {
@@ -211,9 +211,11 @@ impl App {
         let card_text = format!("Cards in stock: {}", card_amount);
 
         Canvas::default()
-            .block(Block::bordered().title(card_text).border_style(
-                Style::default().fg(if selected { Color::Red } else { Color::White }),
-            ))
+            .block(
+                Block::bordered()
+                    .title(card_text)
+                    .border_style(self.canvas_style(pos)),
+            )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
@@ -226,12 +228,12 @@ impl App {
     }
 
     fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let selected = pos == self.selected;
-
         Canvas::default()
-            .block(Block::bordered().title("Foundation").border_style(
-                Style::default().fg(if selected { Color::Red } else { Color::White }),
-            ))
+            .block(
+                Block::bordered()
+                    .title("Foundation")
+                    .border_style(self.canvas_style(pos)),
+            )
             .paint(|_ctx| {})
     }
 
@@ -262,7 +264,35 @@ impl App {
                 }
             }
             KeyCode::Down => self.selected.1 = cmp::min(cmp::max(0, self.selected.1 + 1), 1),
+            KeyCode::Enter => match self.active {
+                Some(active_card) => {
+                    if active_card == self.selected {
+                        self.active = None;
+                    } else {
+                        self.active = Some(self.selected);
+                    }
+                }
+                _ => self.active = Some(self.selected),
+            },
             _ => {}
         }
+    }
+
+    fn canvas_style(&self, pos: (i8, i8)) -> Style {
+        let selected = pos == self.selected;
+        let active = match self.active {
+            Some(position) => position == pos,
+            _ => false,
+        };
+
+        Style::default().fg(if selected && active {
+            Color::Green
+        } else if active {
+            Color::Blue
+        } else if selected {
+            Color::Red
+        } else {
+            Color::White
+        })
     }
 }
