@@ -69,10 +69,12 @@ impl Stock {
         }
     }
 
+    fn shuffle(&mut self) {
+        self.cards.shuffle(&mut self.rng);
+    }
+
     fn deal(&mut self) -> Card {
-        let index = self.rng.random_range(0..self.cards.len());
-        let card = self.cards.remove(index);
-        card
+        self.cards.pop().expect("No more cards in stock")
     }
 }
 
@@ -84,6 +86,7 @@ struct App {
     stock: Stock,
     stock_face: Option<Card>,
     cards: Vec<Vec<Option<Card>>>,
+    cards_cutoff: Vec<u8>,
 }
 
 impl App {
@@ -96,6 +99,7 @@ impl App {
             stock: Stock::new(),
             stock_face: None,
             cards: vec![],
+            cards_cutoff: vec![0, 1, 2, 3, 4, 5, 6],
         }
     }
 
@@ -103,6 +107,7 @@ impl App {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
 
+        self.stock.shuffle();
         self.first_deal();
 
         while !self.exit {
@@ -135,6 +140,35 @@ impl App {
             }
             self.cards.push(row);
         }
+    }
+
+    fn take_from_stock(&mut self) {
+        let card_to_place = match self.stock_face {
+            Some(card) => card,
+            _ => return,
+        };
+
+        let selected_stack = self.selected.0;
+        let card_to_add_to = match self.cards[selected_stack as usize]
+            [self.cards[selected_stack as usize].len() - 1]
+        {
+            Some(card) => card,
+            _ => return,
+        };
+
+        if card_to_add_to.suit % 2 == card_to_place.suit % 2 {
+            return;
+        }
+
+        if card_to_add_to.card - 1 != card_to_place.card {
+            return;
+        }
+
+        self.cards[selected_stack as usize].push(Some(card_to_place));
+
+        self.stock_face = Some(self.stock.deal());
+
+        self.active = Some(self.selected);
     }
 
     fn on_tick(&mut self) {
@@ -179,9 +213,9 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_amount = self.cards[pos.0 as usize].len();
+        let card_amount = self.cards[pos.0 as usize].len() - 1;
 
-        let card = self.cards[pos.0 as usize][0];
+        let card = self.cards[pos.0 as usize][self.cards[pos.0 as usize].len() - 1];
 
         let card_name: String = match card {
             Some(card) => get_card(card.suit, card.card),
@@ -211,8 +245,6 @@ impl App {
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_amount = self.stock.cards.len() + 1;
 
-        let card = self.cards[pos.0 as usize][0];
-
         let card_name: String = match self.stock_face {
             Some(card) => get_card(card.suit, card.card),
             None => "Stock empty".to_string(),
@@ -233,7 +265,10 @@ impl App {
                 ctx.print(
                     10.0,
                     50.0,
-                    Span::styled(format!("{}", card_name), self.card_text_style(card)),
+                    Span::styled(
+                        format!("{}", card_name),
+                        self.card_text_style(self.stock_face),
+                    ),
                 );
             })
     }
@@ -284,7 +319,11 @@ impl App {
                     if active_card == self.selected {
                         self.active = None;
                     } else {
-                        self.active = Some(self.selected);
+                        if active_card.1 == 0 && self.selected.1 == 1 {
+                            self.take_from_stock();
+                        } else {
+                            self.active = Some(self.selected);
+                        }
                     }
                 }
                 _ => self.active = Some(self.selected),
