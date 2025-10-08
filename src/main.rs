@@ -18,10 +18,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn get_card(suit: u8, card: u8) -> String {
     let suit_str = match suit {
-        1 => "Spades".to_string(),
-        2 => "Hearts".to_string(),
-        3 => "Clubs".to_string(),
-        4 => "Diamonds".to_string(),
+        1 => "♠".to_string(),
+        2 => "♥".to_string(),
+        3 => "♣".to_string(),
+        4 => "♦".to_string(),
         _ => "Error".to_string(),
     };
 
@@ -34,7 +34,7 @@ fn get_card(suit: u8, card: u8) -> String {
         _ => "Error".to_string(),
     };
 
-    format!("{} of {}", card_str, suit_str)
+    format!("{} {}", card_str, suit_str)
 }
 
 #[derive(Copy, Clone)]
@@ -185,32 +185,40 @@ impl App {
             Some(card) => get_card(card.suit, card.card),
             None => "Stock empty".to_string(),
         };
-        let card_text = format!("Cards: {} | On top: {}", card_amount, card_name);
+        let card_text = format!("Hidden cards: {}", card_amount);
 
         Canvas::default()
             .block(Block::bordered().title(card_text).border_style(
                 Style::default().fg(if selected { Color::Red } else { Color::White }),
             ))
-            .paint(|_ctx| {})
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(move |ctx| {
+                ctx.print(10.0, 50.0, format!("{}", card_name));
+            })
     }
 
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let selected = pos == self.selected;
 
-        let card_amount = self.stock.cards.len();
+        let card_amount = self.stock.cards.len() + 1;
 
         let card_name: String = match self.stock_face {
             Some(card) => get_card(card.suit, card.card),
             None => "Stock empty".to_string(),
         };
 
-        let card_text = format!("Cards: {} | On top: {}", card_amount, card_name);
+        let card_text = format!("Cards in stock: {}", card_amount);
 
         Canvas::default()
             .block(Block::bordered().title(card_text).border_style(
                 Style::default().fg(if selected { Color::Red } else { Color::White }),
             ))
-            .paint(|_ctx| {})
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(move |ctx| {
+                ctx.print(10.0, 50.0, format!("{}", card_name));
+            })
     }
 
     fn empty_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
