@@ -3,6 +3,7 @@ use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
     style::{Color, Style},
+    text::Span,
     widgets::{Block, Widget, canvas::Canvas},
     *,
 };
@@ -181,10 +182,12 @@ impl App {
         let card_amount = self.cards[pos.0 as usize].len();
 
         let card = self.cards[pos.0 as usize][0];
+
         let card_name: String = match card {
             Some(card) => get_card(card.suit, card.card),
             None => "Stock empty".to_string(),
         };
+
         let card_text = format!("Hidden cards: {}", card_amount);
 
         Canvas::default()
@@ -196,12 +199,19 @@ impl App {
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
-                ctx.print(10.0, 50.0, format!("{}", card_name));
+                ctx.layer();
+                ctx.print(
+                    10.0,
+                    50.0,
+                    Span::styled(format!("{}", card_name), self.card_text_style(card)),
+                );
             })
     }
 
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_amount = self.stock.cards.len() + 1;
+
+        let card = self.cards[pos.0 as usize][0];
 
         let card_name: String = match self.stock_face {
             Some(card) => get_card(card.suit, card.card),
@@ -219,7 +229,12 @@ impl App {
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
-                ctx.print(10.0, 50.0, format!("{}", card_name));
+                ctx.layer();
+                ctx.print(
+                    10.0,
+                    50.0,
+                    Span::styled(format!("{}", card_name), self.card_text_style(card)),
+                );
             })
     }
 
@@ -293,6 +308,19 @@ impl App {
             Color::Red
         } else {
             Color::White
+        })
+    }
+
+    fn card_text_style(&self, card: Option<Card>) -> Style {
+        Style::default().fg(match card {
+            Some(c) => {
+                if c.suit % 2 == 0 {
+                    Color::Red
+                } else {
+                    Color::Blue
+                }
+            }
+            _ => Color::Yellow,
         })
     }
 }
