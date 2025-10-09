@@ -86,8 +86,7 @@ struct App {
     stock: Stock,
     drawn: Stock,
     stock_face: Option<Card>,
-    cards: Vec<Vec<Option<Card>>>,
-    cards_cutoff: Vec<u8>,
+    tableau: Vec<Vec<Option<Card>>>,
 }
 
 impl App {
@@ -100,7 +99,7 @@ impl App {
             stock: Stock::new(),
             drawn: Stock::new(),
             stock_face: None,
-            cards: vec![],
+            tableau: vec![],
             cards_cutoff: vec![0, 1, 2, 3, 4, 5, 6],
         }
     }
@@ -136,13 +135,13 @@ impl App {
         self.stock_face = Some(dealt_card);
         self.drawn.cards.push(dealt_card);
 
-        self.cards.clear();
+        self.tableau.clear();
         for i in 0..7 {
             let mut row = Vec::new();
             for _j in 0..=i {
                 row.push(Some(self.stock.deal()));
             }
-            self.cards.push(row);
+            self.tableau.push(row);
         }
     }
 
@@ -153,8 +152,8 @@ impl App {
         };
 
         let selected_stack = self.selected.0;
-        let card_to_add_to = match self.cards[selected_stack as usize]
-            [self.cards[selected_stack as usize].len() - 1]
+        let card_to_add_to = match self.tableau[selected_stack as usize]
+            [self.tableau[selected_stack as usize].len() - 1]
         {
             Some(card) => card,
             _ => return,
@@ -168,7 +167,7 @@ impl App {
             return;
         }
 
-        self.cards[selected_stack as usize].push(Some(card_to_place));
+        self.tableau[selected_stack as usize].push(Some(card_to_place));
 
         self.stock_face = Some(self.stock.deal());
 
@@ -209,9 +208,9 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_amount = self.cards[pos.0 as usize].len() - 1;
+        let card_amount = self.tableau[pos.0 as usize].len() - 1;
 
-        let card = self.cards[pos.0 as usize][self.cards[pos.0 as usize].len() - 1];
+        let card = self.tableau[pos.0 as usize][self.tableau[pos.0 as usize].len() - 1];
 
         let card_name: String = match card {
             Some(card) => get_card(card.suit, card.card),
