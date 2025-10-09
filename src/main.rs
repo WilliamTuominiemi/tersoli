@@ -84,6 +84,7 @@ struct App {
     selected: (i8, i8),
     active: Option<(i8, i8)>,
     stock: Stock,
+    drawn: Stock,
     stock_face: Option<Card>,
     cards: Vec<Vec<Option<Card>>>,
     cards_cutoff: Vec<u8>,
@@ -97,6 +98,7 @@ impl App {
             selected: (0, 0),
             active: None,
             stock: Stock::new(),
+            drawn: Stock::new(),
             stock_face: None,
             cards: vec![],
             cards_cutoff: vec![0, 1, 2, 3, 4, 5, 6],
@@ -130,7 +132,9 @@ impl App {
     }
 
     fn first_deal(&mut self) {
-        self.stock_face = Some(self.stock.deal());
+        let dealt_card = self.stock.deal();
+        self.stock_face = Some(dealt_card);
+        self.drawn.cards.push(dealt_card);
 
         self.cards.clear();
         for i in 0..7 {
@@ -142,7 +146,7 @@ impl App {
         }
     }
 
-    fn take_from_stock(&mut self) {
+    fn take_from_drawn(&mut self) {
         let card_to_place = match self.stock_face {
             Some(card) => card,
             _ => return,
@@ -183,20 +187,12 @@ impl App {
         let vertical = Layout::vertical(vertical_constraints);
 
         let [top, bottom] = vertical.areas(frame.area());
-        let [
-            stock,
-            first_empty,
-            second_empty,
-            spades,
-            hearts,
-            clubs,
-            diamonds,
-        ] = horizontal.areas(top);
+        let [stock, drawn, second_empty, spades, hearts, clubs, diamonds] = horizontal.areas(top);
 
         let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
         frame.render_widget(self.stock_canvas((0, 0)), stock);
-        frame.render_widget(self.empty_canvas((1, 0)), first_empty);
+        frame.render_widget(self.drawn_canvas((1, 0)), drawn);
         frame.render_widget(self.empty_canvas((2, 0)), second_empty);
         frame.render_widget(self.foundation_canvas((3, 0)), spades);
         frame.render_widget(self.foundation_canvas((4, 0)), hearts);
@@ -245,17 +241,29 @@ impl App {
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_amount = self.stock.cards.len() + 1;
 
-        let card_name: String = match self.stock_face {
-            Some(card) => get_card(card.suit, card.card),
-            None => "Stock empty".to_string(),
-        };
-
         let card_text = format!("Cards in stock: {}", card_amount);
 
         Canvas::default()
             .block(
                 Block::bordered()
                     .title(card_text)
+                    .border_style(self.canvas_style(pos)),
+            )
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(|_ctx| {})
+    }
+
+    fn drawn_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let card_name: String = match self.stock_face {
+            Some(card) => get_card(card.suit, card.card),
+            None => "Stock empty".to_string(),
+        };
+
+        Canvas::default()
+            .block(
+                Block::bordered()
+                    .title("Drawn cards")
                     .border_style(self.canvas_style(pos)),
             )
             .x_bounds([0.0, 100.0])
@@ -296,20 +304,18 @@ impl App {
             KeyCode::Left => {
                 self.selected.0 = cmp::min(cmp::max(0, self.selected.0 - 1), 6);
                 if self.selected == (2, 0) {
-                    self.selected = (0, 0);
+                    self.selected = (1, 0);
                 }
             }
             KeyCode::Right => {
                 self.selected.0 = cmp::min(cmp::max(0, self.selected.0 + 1), 6);
-                if self.selected == (1, 0) {
+                if self.selected == (2, 0) {
                     self.selected = (3, 0);
                 }
             }
             KeyCode::Up => {
                 self.selected.1 = cmp::min(cmp::max(0, self.selected.1 - 1), 1);
-                if self.selected == (1, 0) {
-                    self.selected = (0, 0);
-                } else if self.selected == (2, 0) {
+                if self.selected == (2, 0) {
                     self.selected = (3, 0);
                 }
             }
@@ -319,8 +325,8 @@ impl App {
                     if active_card == self.selected {
                         self.active = None;
                     } else {
-                        if active_card.1 == 0 && self.selected.1 == 1 {
-                            self.take_from_stock();
+                        if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
+                            self.take_from_drawn();
                         } else {
                             self.active = Some(self.selected);
                         }
