@@ -87,6 +87,7 @@ struct App {
     drawn: Stock,
     stock_face: Option<Card>,
     tableau: Vec<Vec<Option<Card>>>,
+    foundations: Vec<u8>,
 }
 
 impl App {
@@ -100,7 +101,7 @@ impl App {
             drawn: Stock::new(),
             stock_face: None,
             tableau: vec![],
-            cards_cutoff: vec![0, 1, 2, 3, 4, 5, 6],
+            foundations: vec![0, 0, 0, 0],
         }
     }
 
@@ -170,6 +171,55 @@ impl App {
         self.tableau[selected_stack as usize].push(Some(card_to_place));
 
         self.stock_face = Some(self.stock.deal());
+
+        self.active = Some(self.selected);
+    }
+
+    fn place_in_foundation(&mut self) {
+        let mut active_position = (0, 0);
+        let card: Card = match self.active {
+            Some(active) => {
+                active_position = active;
+                if active.1 == 1 {
+                    if let Some(card) =
+                        self.tableau[active.0 as usize][self.tableau[active.0 as usize].len() - 1]
+                    {
+                        card
+                    } else {
+                        return;
+                    }
+                } else if active.1 == 0 && active.0 == 1 {
+                    if let Some(card) = self.stock_face {
+                        card
+                    } else {
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+            _ => return,
+        };
+
+        let selected_foundation = self.selected.0 - 2;
+
+        if selected_foundation != card.suit as i8 {
+            return;
+        };
+
+        let current_value = self.foundations[(card.suit - 1) as usize];
+
+        if card.card != current_value + 1 {
+            return;
+        };
+
+        self.foundations[(card.suit - 1) as usize] = card.card;
+
+        if active_position.1 == 0 && active_position.0 == 1 {
+            self.stock_face = Some(self.stock.deal());
+        } else {
+            self.tableau[active_position.0 as usize].pop();
+        }
 
         self.active = Some(self.selected);
     }
@@ -285,13 +335,52 @@ impl App {
     }
 
     fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let suit_index = pos.0 - 3;
+
+        let suit = match suit_index {
+            0 => "♠".to_string(),
+            1 => "♥".to_string(),
+            2 => "♣".to_string(),
+            3 => "♦".to_string(),
+            _ => "Error".to_string(),
+        };
+
+        let number = match self.foundations[suit_index as usize] {
+            0 => "".to_string(),
+            1 => "Ace".to_string(),
+            2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => self.foundations[suit_index as usize].to_string(),
+            11 => "Jack".to_string(),
+            12 => "Queen".to_string(),
+            13 => "King".to_string(),
+            _ => "Error".to_string(),
+        };
+
+        let card_name = format!("{} {}", suit, number);
+        // let card_name = "test";
+
         Canvas::default()
             .block(
                 Block::bordered()
                     .title("Foundation")
                     .border_style(self.canvas_style(pos)),
             )
-            .paint(|_ctx| {})
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(move |ctx| {
+                ctx.layer();
+                ctx.print(
+                    10.0,
+                    50.0,
+                    Span::styled(
+                        format!("{}", card_name),
+                        Style::default().fg(if pos.0 % 2 == 0 {
+                            Color::Red
+                        } else {
+                            Color::Blue
+                        }),
+                    ),
+                )
+            })
     }
 
     fn handle_key_press(&mut self, key: event::KeyEvent) {
@@ -326,6 +415,8 @@ impl App {
                     } else {
                         if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
                             self.take_from_drawn();
+                        } else if self.selected.1 == 0 && self.selected.0 > 2 {
+                            self.place_in_foundation();
                         } else {
                             self.active = Some(self.selected);
                         }
