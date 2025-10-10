@@ -321,16 +321,11 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let mut card_amount = 0;
-        if self.tableau[pos.0 as usize].len() > 0 {
-            card_amount = self.tableau[pos.0 as usize].len() - 1;
-        }
-
         let visible_cards: Vec<Option<Card>> = self.tableau[pos.0 as usize]
             [(self.tableau_cutoffs[pos.0 as usize] as usize)..]
             .to_vec();
 
-        let card_text = format!("Hidden cards: {}", card_amount);
+        let card_text = format!("Hidden cards: {}", self.tableau_cutoffs[pos.0 as usize]);
 
         Canvas::default()
             .block(
