@@ -87,6 +87,7 @@ struct App {
     drawn: Stock,
     stock_face: Option<Card>,
     tableau: Vec<Vec<Option<Card>>>,
+    tableau_cutoffs: Vec<u8>,
     foundations: Vec<u8>,
 }
 
@@ -101,6 +102,7 @@ impl App {
             drawn: Stock::new(),
             stock_face: None,
             tableau: vec![],
+            tableau_cutoffs: vec![0, 1, 2, 3, 4, 5, 6],
             foundations: vec![0, 0, 0, 0],
         }
     }
@@ -218,6 +220,7 @@ impl App {
         if active_position.1 == 0 && active_position.0 == 1 {
             self.stock_face = Some(self.stock.deal());
         } else {
+            self.tableau_cutoffs[active_position.0 as usize] -= 1;
             self.tableau[active_position.0 as usize].pop();
         }
 
@@ -260,12 +263,9 @@ impl App {
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_amount = self.tableau[pos.0 as usize].len() - 1;
 
-        let card = self.tableau[pos.0 as usize][self.tableau[pos.0 as usize].len() - 1];
-
-        let card_name: String = match card {
-            Some(card) => get_card(card.suit, card.card),
-            None => "Stock empty".to_string(),
-        };
+        let visible_cards: Vec<Option<Card>> = self.tableau[pos.0 as usize]
+            [(self.tableau_cutoffs[pos.0 as usize] as usize)..]
+            .to_vec();
 
         let card_text = format!("Hidden cards: {}", card_amount);
 
@@ -279,11 +279,18 @@ impl App {
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
                 ctx.layer();
-                ctx.print(
-                    10.0,
-                    50.0,
-                    Span::styled(format!("{}", card_name), self.card_text_style(card)),
-                );
+                for (i, card) in visible_cards.iter().enumerate() {
+                    let card_name: String = match card {
+                        Some(card) => get_card(card.suit, card.card),
+                        None => "Stock empty".to_string(),
+                    };
+
+                    ctx.print(
+                        10.0,
+                        i as f64 * 10.0,
+                        Span::styled(format!("{}", card_name), self.card_text_style(*card)),
+                    );
+                }
             })
     }
 
@@ -356,7 +363,6 @@ impl App {
         };
 
         let card_name = format!("{} {}", suit, number);
-        // let card_name = "test";
 
         Canvas::default()
             .block(
