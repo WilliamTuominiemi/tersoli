@@ -227,6 +227,41 @@ impl App {
         self.active = Some(self.selected);
     }
 
+    fn move_between_tableau(&mut self) {
+        // From
+        let mut active_tableau = 0;
+        let active_card = match self.active {
+            Some(active) => {
+                active_tableau = active.0;
+                match self.tableau[active.0 as usize][self.tableau[active.0 as usize].len() - 1] {
+                    Some(card) => card,
+                    _ => return,
+                }
+            }
+            _ => return,
+        };
+
+        // To
+        let selected_card: Card = match self.tableau[self.selected.0 as usize]
+            [self.tableau[self.selected.0 as usize].len() - 1]
+        {
+            Some(card) => card,
+            _ => return,
+        };
+
+        if active_card.suit % 2 == selected_card.suit % 2 {
+            return;
+        }
+
+        if active_card.card != selected_card.card - 1 {
+            return;
+        }
+
+        self.tableau[self.selected.0 as usize].push(Some(active_card));
+        self.tableau_cutoffs[active_tableau as usize] -= 1;
+        self.tableau[active_tableau as usize].pop();
+    }
+
     fn on_tick(&mut self) {
         self.tick_count += 1;
     }
@@ -423,6 +458,8 @@ impl App {
                             self.take_from_drawn();
                         } else if self.selected.1 == 0 && self.selected.0 > 2 {
                             self.place_in_foundation();
+                        } else if self.selected.1 == 1 && active_card.1 == 1 {
+                            self.move_between_tableau();
                         } else {
                             self.active = Some(self.selected);
                         }
