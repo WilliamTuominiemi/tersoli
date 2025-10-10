@@ -163,10 +163,12 @@ impl App {
         };
 
         if card_to_add_to.suit % 2 == card_to_place.suit % 2 {
+            self.active = Some(self.selected);
             return;
         }
 
         if card_to_add_to.card - 1 != card_to_place.card {
+            self.active = Some(self.selected);
             return;
         }
 
@@ -206,12 +208,14 @@ impl App {
         let selected_foundation = self.selected.0 - 2;
 
         if selected_foundation != card.suit as i8 {
+            self.active = Some(self.selected);
             return;
         };
 
         let current_value = self.foundations[(card.suit - 1) as usize];
 
         if card.card != current_value + 1 {
+            self.active = Some(self.selected);
             return;
         };
 
@@ -252,10 +256,12 @@ impl App {
         };
 
         if active_card.suit % 2 == selected_card.suit % 2 {
+            self.active = Some(self.selected);
             return;
         }
 
         if active_card.card != selected_card.card - 1 {
+            self.active = Some(self.selected);
             return;
         }
 
@@ -264,6 +270,8 @@ impl App {
             self.tableau_cutoffs[active_tableau as usize] -= 1;
         }
         self.tableau[active_tableau as usize].pop();
+
+        self.active = Some(self.selected);
     }
 
     fn on_tick(&mut self) {
