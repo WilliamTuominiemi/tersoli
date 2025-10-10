@@ -178,7 +178,7 @@ impl App {
     }
 
     fn place_in_foundation(&mut self) {
-        let mut active_position = (0, 0);
+        let mut active_position: (i8, i8);
         let card: Card = match self.active {
             Some(active) => {
                 active_position = active;
@@ -220,7 +220,9 @@ impl App {
         if active_position.1 == 0 && active_position.0 == 1 {
             self.stock_face = Some(self.stock.deal());
         } else {
-            self.tableau_cutoffs[active_position.0 as usize] -= 1;
+            if self.tableau_cutoffs[active_position.0 as usize] > 0 {
+                self.tableau_cutoffs[active_position.0 as usize] -= 1;
+            }
             self.tableau[active_position.0 as usize].pop();
         }
 
@@ -229,7 +231,7 @@ impl App {
 
     fn move_between_tableau(&mut self) {
         // From
-        let mut active_tableau = 0;
+        let active_tableau;
         let active_card = match self.active {
             Some(active) => {
                 active_tableau = active.0;
@@ -258,7 +260,9 @@ impl App {
         }
 
         self.tableau[self.selected.0 as usize].push(Some(active_card));
-        self.tableau_cutoffs[active_tableau as usize] -= 1;
+        if self.tableau_cutoffs[active_tableau as usize] > 0 {
+            self.tableau_cutoffs[active_tableau as usize] -= 1;
+        }
         self.tableau[active_tableau as usize].pop();
     }
 
@@ -296,7 +300,10 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_amount = self.tableau[pos.0 as usize].len() - 1;
+        let mut card_amount = 0;
+        if self.tableau[pos.0 as usize].len() > 0 {
+            card_amount = self.tableau[pos.0 as usize].len() - 1;
+        }
 
         let visible_cards: Vec<Option<Card>> = self.tableau[pos.0 as usize]
             [(self.tableau_cutoffs[pos.0 as usize] as usize)..]
