@@ -136,6 +136,7 @@ impl App {
     fn first_deal(&mut self) {
         let dealt_card = self.stock.deal();
         self.stock_face = Some(dealt_card);
+        self.drawn.cards = vec![];
         self.drawn.cards.push(dealt_card);
 
         self.tableau.clear();
@@ -146,6 +147,17 @@ impl App {
             }
             self.tableau.push(row);
         }
+    }
+
+    fn draw_new(&mut self) {
+        if self.stock.cards.len() == 0 {
+            self.stock.cards = self.drawn.cards.clone();
+            self.drawn.cards = vec![];
+        }
+
+        let new_card = self.stock.deal();
+        self.stock_face = Some(new_card);
+        self.drawn.cards.push(new_card);
     }
 
     fn take_from_drawn(&mut self) {
@@ -173,6 +185,7 @@ impl App {
         }
 
         self.tableau[selected_stack as usize].push(Some(card_to_place));
+        self.drawn.cards.pop();
 
         self.stock_face = Some(self.stock.deal());
 
@@ -469,7 +482,9 @@ impl App {
                     if active_card == self.selected {
                         self.active = None;
                     } else {
-                        if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
+                        if self.selected == (0, 0) {
+                            self.draw_new();
+                        } else if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
                             self.take_from_drawn();
                         } else if self.selected.1 == 0 && self.selected.0 > 2 {
                             self.place_in_foundation();
@@ -480,7 +495,14 @@ impl App {
                         }
                     }
                 }
-                _ => self.active = Some(self.selected),
+                _ => {
+                    self.active = if self.selected == (0, 0) {
+                        self.draw_new();
+                        Some((1, 0))
+                    } else {
+                        Some(self.selected)
+                    }
+                }
             },
             _ => {}
         }
