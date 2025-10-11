@@ -10,7 +10,7 @@ use std::cmp;
 use std::time::{Duration, Instant};
 
 mod utils;
-use utils::get_card;
+use utils::{canvas_style, card_text_style, get_card};
 
 mod card;
 use card::Card;
@@ -241,7 +241,7 @@ impl App {
 
         frame.render_widget(self.stock_canvas((0, 0)), stock);
         frame.render_widget(self.waste_canvas((1, 0)), waste);
-        frame.render_widget(self.empty_canvas((2, 0)), second_empty);
+        frame.render_widget(self.empty_canvas(), second_empty);
         frame.render_widget(self.foundation_canvas((3, 0)), spades);
         frame.render_widget(self.foundation_canvas((4, 0)), hearts);
         frame.render_widget(self.foundation_canvas((5, 0)), clubs);
@@ -265,7 +265,7 @@ impl App {
             .block(
                 Block::bordered()
                     .title(card_text)
-                    .border_style(self.canvas_style(pos)),
+                    .border_style(canvas_style(pos, self.selected, self.active)),
             )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
@@ -277,7 +277,7 @@ impl App {
                     ctx.print(
                         10.0,
                         i as f64 * 10.0,
-                        Span::styled(format!("{}", card_name), self.card_text_style(Some(*card))),
+                        Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
                     );
                 }
             })
@@ -292,7 +292,7 @@ impl App {
             .block(
                 Block::bordered()
                     .title(card_text)
-                    .border_style(self.canvas_style(pos)),
+                    .border_style(canvas_style(pos, self.selected, self.active)),
             )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
@@ -309,7 +309,7 @@ impl App {
             .block(
                 Block::bordered()
                     .title("Waste pile")
-                    .border_style(self.canvas_style(pos)),
+                    .border_style(canvas_style(pos, self.selected, self.active)),
             )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
@@ -320,13 +320,13 @@ impl App {
                     50.0,
                     Span::styled(
                         format!("{}", card_name),
-                        self.card_text_style(self.waste.get_top_card()),
+                        card_text_style(self.waste.get_top_card()),
                     ),
                 );
             })
     }
 
-    fn empty_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+    fn empty_canvas(&self) -> impl Widget + '_ {
         Canvas::default().paint(|_ctx| {})
     }
 
@@ -342,7 +342,7 @@ impl App {
             .block(
                 Block::bordered()
                     .title("Foundation")
-                    .border_style(self.canvas_style(pos)),
+                    .border_style(canvas_style(pos, self.selected, self.active)),
             )
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
@@ -417,36 +417,5 @@ impl App {
             },
             _ => {}
         }
-    }
-
-    fn canvas_style(&self, pos: (i8, i8)) -> Style {
-        let selected = pos == self.selected;
-        let active = match self.active {
-            Some(position) => position == pos,
-            _ => false,
-        };
-
-        Style::default().fg(if selected && active {
-            Color::Green
-        } else if active {
-            Color::Blue
-        } else if selected {
-            Color::Red
-        } else {
-            Color::White
-        })
-    }
-
-    fn card_text_style(&self, card: Option<Card>) -> Style {
-        Style::default().fg(match card {
-            Some(c) => {
-                if c.suit % 2 == 0 {
-                    Color::Red
-                } else {
-                    Color::Blue
-                }
-            }
-            _ => Color::Yellow,
-        })
     }
 }

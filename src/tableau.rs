@@ -1,4 +1,4 @@
-use crate::card::{self, Card};
+use crate::card::Card;
 use crate::stock::Stock;
 
 pub struct Tableau {
