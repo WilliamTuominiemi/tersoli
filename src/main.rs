@@ -261,6 +261,24 @@ impl App {
         };
 
         // To
+
+        if self.tableau[self.selected.0 as usize].len() == 0 {
+            if active_card.card != 13 {
+                return;
+            } else {
+                self.tableau[self.selected.0 as usize].push(Some(active_card));
+                if self.tableau_cutoffs[active_tableau as usize] > 0
+                    && self.tableau_cutoffs[active_tableau as usize] as usize
+                        == self.tableau[active_tableau as usize].len() - 1
+                {
+                    self.tableau_cutoffs[active_tableau as usize] -= 1;
+                }
+                self.tableau[active_tableau as usize].pop();
+                self.active = Some(self.selected);
+                return;
+            }
+        }
+
         let selected_card: Card = match self.tableau[self.selected.0 as usize]
             [self.tableau[self.selected.0 as usize].len() - 1]
         {
@@ -279,7 +297,10 @@ impl App {
         }
 
         self.tableau[self.selected.0 as usize].push(Some(active_card));
-        if self.tableau_cutoffs[active_tableau as usize] > 0 {
+        if self.tableau_cutoffs[active_tableau as usize] > 0
+            && self.tableau_cutoffs[active_tableau as usize] as usize
+                == self.tableau[active_tableau as usize].len() - 1
+        {
             self.tableau_cutoffs[active_tableau as usize] -= 1;
         }
         self.tableau[active_tableau as usize].pop();
