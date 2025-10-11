@@ -190,35 +190,39 @@ impl App {
             _ => return,
         };
 
-        if self.tableau.cards[self.selected.0 as usize].len() == 0 {
-            if active_card.rank == 13 {
-                self.tableau.add_card(self.selected, active_card);
-                self.tableau.update_cutoffs(active_position);
-                self.tableau.cards[active_position.0 as usize].pop();
-                self.active = None;
-            } else {
-                return;
-            }
-        }
-
         let selected_card: Card = match self.tableau.get_top_card(self.selected) {
             Some(tableau_card) => tableau_card,
+            _ => {
+                if active_card.rank == 13 {
+                    self.tableau.add_card(self.selected, active_card);
+                    self.tableau.update_cutoffs(active_position);
+                    self.tableau.cards[active_position.0 as usize].pop();
+                    self.active = None;
+                    return;
+                } else {
+                    return;
+                }
+            }
+        };
+
+        let needed_rank = selected_card.rank - 1;
+        let needed_suit = (selected_card.suit + 1) % 2;
+        let card_index = match self
+            .tableau
+            .find_card(active_position, needed_rank, needed_suit)
+        {
+            Some(index) => index,
             _ => return,
         };
 
-        if active_card.suit % 2 == selected_card.suit % 2 {
-            self.active = Some(self.selected);
-            return;
-        }
+        let cards_to_move = self
+            .tableau
+            .take_cards_at_index(active_position, card_index);
 
-        if active_card.rank != selected_card.rank - 1 {
-            self.active = Some(self.selected);
-            return;
+        for card in cards_to_move {
+            self.tableau.add_card(self.selected, card);
+            self.tableau.update_cutoffs(active_position);
         }
-
-        self.tableau.add_card(self.selected, active_card);
-        self.tableau.update_cutoffs(active_position);
-        self.tableau.cards[active_position.0 as usize].pop();
 
         self.active = None;
     }

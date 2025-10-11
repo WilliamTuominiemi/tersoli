@@ -33,6 +33,24 @@ impl Tableau {
         self.cards[position.0 as usize].last().copied()
     }
 
+    pub fn find_card(&self, position: (i8, i8), rank: u8, suit: u8) -> Option<usize> {
+        let visible = self.cutoffs[position.0 as usize] as usize;
+        self.cards[position.0 as usize]
+            .iter()
+            .enumerate()
+            .skip(visible)
+            .position(|(_, &card)| card.rank == rank && card.suit % 2 == suit)
+            .map(|index| index + visible)
+    }
+
+    pub fn take_cards_at_index(&mut self, position: (i8, i8), index: usize) -> Vec<Card> {
+        if position.0 as usize >= self.cards.len() || index > self.cards[position.0 as usize].len()
+        {
+            return vec![];
+        }
+        self.cards[position.0 as usize].split_off(index)
+    }
+
     pub fn add_card(&mut self, position: (i8, i8), card: Card) {
         self.cards[position.0 as usize].push(card);
     }
@@ -42,11 +60,15 @@ impl Tableau {
     }
 
     pub fn update_cutoffs(&mut self, position: (i8, i8)) {
-        let cutoff = self.cutoffs[position.0 as usize];
-        let card_index = self.cards[position.0 as usize].len() as u8;
+        let index = position.0 as usize;
+        if index >= self.cutoffs.len() || index >= self.cards.len() {
+            return;
+        }
+        let cutoff = self.cutoffs[index];
+        let card_index = self.cards[index].len() as u8;
 
-        if cutoff > 0 && card_index > 0 && cutoff < card_index {
-            self.cutoffs[position.0 as usize] -= 1;
+        if cutoff > 0 && card_index > 0 {
+            self.cutoffs[index] -= 1;
         }
     }
 }
