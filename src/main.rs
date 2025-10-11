@@ -1,4 +1,3 @@
-use rand::prelude::*;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
@@ -10,72 +9,20 @@ use ratatui::{
 use std::cmp;
 use std::time::{Duration, Instant};
 
+mod utils;
+use utils::get_card;
+
+mod card;
+use card::Card;
+
+mod stock;
+use stock::Stock;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
     ratatui::restore();
     app_result
-}
-
-fn get_card(suit: u8, card: u8) -> String {
-    let suit_str = match suit {
-        1 => "♠".to_string(),
-        2 => "♥".to_string(),
-        3 => "♣".to_string(),
-        4 => "♦".to_string(),
-        _ => "Error".to_string(),
-    };
-
-    let card_str = match card {
-        1 => "Ace".to_string(),
-        2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => card.to_string(),
-        11 => "Jack".to_string(),
-        12 => "Queen".to_string(),
-        13 => "King".to_string(),
-        _ => "Error".to_string(),
-    };
-
-    format!("{} {}", card_str, suit_str)
-}
-
-#[derive(Copy, Clone)]
-struct Card {
-    suit: u8,
-    card: u8,
-}
-
-impl Card {
-    const fn new(suit: u8, card: u8) -> Self {
-        Self { suit, card }
-    }
-}
-
-struct Stock {
-    cards: Vec<Card>,
-    rng: ThreadRng,
-}
-
-impl Stock {
-    fn new() -> Self {
-        let mut new_stock = Vec::with_capacity(52);
-        for i in 1..=4 {
-            for j in 1..=13 {
-                new_stock.push(Card::new(i, j));
-            }
-        }
-        Self {
-            cards: new_stock,
-            rng: rand::rng(),
-        }
-    }
-
-    fn shuffle(&mut self) {
-        self.cards.shuffle(&mut self.rng);
-    }
-
-    fn deal(&mut self) -> Card {
-        self.cards.pop().expect("No more cards in stock")
-    }
 }
 
 struct App {
@@ -179,7 +126,7 @@ impl App {
             return;
         }
 
-        if card_to_add_to.card - 1 != card_to_place.card {
+        if card_to_add_to.rank - 1 != card_to_place.rank {
             self.active = Some(self.selected);
             return;
         }
@@ -227,12 +174,12 @@ impl App {
 
         let current_value = self.foundations[(card.suit - 1) as usize];
 
-        if card.card != current_value + 1 {
+        if card.rank != current_value + 1 {
             self.active = Some(self.selected);
             return;
         };
 
-        self.foundations[(card.suit - 1) as usize] = card.card;
+        self.foundations[(card.suit - 1) as usize] = card.rank;
 
         if active_position.1 == 0 && active_position.0 == 1 {
             self.stock_face = Some(self.stock.deal());
@@ -263,7 +210,7 @@ impl App {
         // To
 
         if self.tableau[self.selected.0 as usize].len() == 0 {
-            if active_card.card != 13 {
+            if active_card.rank != 13 {
                 return;
             } else {
                 self.tableau[self.selected.0 as usize].push(Some(active_card));
@@ -291,7 +238,7 @@ impl App {
             return;
         }
 
-        if active_card.card != selected_card.card - 1 {
+        if active_card.rank != selected_card.rank - 1 {
             self.active = Some(self.selected);
             return;
         }
@@ -360,7 +307,7 @@ impl App {
                 ctx.layer();
                 for (i, card) in visible_cards.iter().enumerate() {
                     let card_name: String = match card {
-                        Some(card) => get_card(card.suit, card.card),
+                        Some(card) => get_card(card.suit, card.rank),
                         None => "Stock empty".to_string(),
                     };
 
@@ -391,7 +338,7 @@ impl App {
 
     fn drawn_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_name: String = match self.stock_face {
-            Some(card) => get_card(card.suit, card.card),
+            Some(card) => get_card(card.suit, card.rank),
             None => "Stock empty".to_string(),
         };
 
