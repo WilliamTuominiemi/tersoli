@@ -18,6 +18,9 @@ use card::Card;
 mod stock;
 use stock::Stock;
 
+mod tableau;
+use tableau::Tableau;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
@@ -33,8 +36,7 @@ struct App {
     stock: Stock,
     drawn: Stock,
     stock_face: Option<Card>,
-    tableau: Vec<Vec<Option<Card>>>,
-    tableau_cutoffs: Vec<u8>,
+    tableau: Tableau,
     foundations: Vec<u8>,
 }
 
@@ -48,8 +50,7 @@ impl App {
             stock: Stock::new(),
             drawn: Stock::new(),
             stock_face: None,
-            tableau: vec![],
-            tableau_cutoffs: vec![0, 1, 2, 3, 4, 5, 6],
+            tableau: Tableau::new(),
             foundations: vec![0, 0, 0, 0],
         }
     }
@@ -85,14 +86,7 @@ impl App {
         self.drawn.cards = vec![];
         self.drawn.cards.push(dealt_card);
 
-        self.tableau.clear();
-        for i in 0..7 {
-            let mut row = Vec::new();
-            for _j in 0..=i {
-                row.push(Some(self.stock.deal()));
-            }
-            self.tableau.push(row);
-        }
+        self.tableau.initialize(&mut self.stock);
     }
 
     fn draw_new(&mut self) {
@@ -112,10 +106,7 @@ impl App {
             _ => return,
         };
 
-        let selected_stack = self.selected.0;
-        let card_to_add_to = match self.tableau[selected_stack as usize]
-            [self.tableau[selected_stack as usize].len() - 1]
-        {
+        let card_to_add_to = match self.tableau.get_top_card(self.selected) {
             Some(card) => card,
             _ => return,
         };
@@ -130,12 +121,13 @@ impl App {
             return;
         }
 
-        self.tableau[selected_stack as usize].push(Some(card_to_place));
+        self.tableau.add_card(self.selected, card_to_place);
+
         self.drawn.cards.pop();
 
         self.stock_face = Some(self.stock.deal());
 
-        self.active = Some(self.selected);
+        self.active = None;
     }
 
     fn place_in_foundation(&mut self) {
@@ -144,12 +136,9 @@ impl App {
             Some(active) => {
                 active_position = active;
                 if active.1 == 1 {
-                    if let Some(card) =
-                        self.tableau[active.0 as usize][self.tableau[active.0 as usize].len() - 1]
-                    {
-                        card
-                    } else {
-                        return;
+                    match self.tableau.get_top_card(active) {
+                        Some(tableau_card) => tableau_card,
+                        _ => return,
                     }
                 } else if active.1 == 0 && active.0 == 1 {
                     if let Some(card) = self.stock_face {
@@ -183,23 +172,23 @@ impl App {
         if active_position.1 == 0 && active_position.0 == 1 {
             self.stock_face = Some(self.stock.deal());
         } else {
-            if self.tableau_cutoffs[active_position.0 as usize] > 0 {
-                self.tableau_cutoffs[active_position.0 as usize] -= 1;
+            if self.tableau.cutoffs[active_position.0 as usize] > 0 {
+                self.tableau.cutoffs[active_position.0 as usize] -= 1;
             }
-            self.tableau[active_position.0 as usize].pop();
+            self.tableau.cards[active_position.0 as usize].pop();
         }
 
-        self.active = Some(self.selected);
+        self.active = None;
     }
 
     fn move_between_tableau(&mut self) {
         // From
-        let active_tableau;
+        let active_position;
         let active_card = match self.active {
             Some(active) => {
-                active_tableau = active.0;
-                match self.tableau[active.0 as usize][self.tableau[active.0 as usize].len() - 1] {
-                    Some(card) => card,
+                active_position = active;
+                match self.tableau.get_top_card(active) {
+                    Some(tableau_card) => tableau_card,
                     _ => return,
                 }
             }
@@ -208,27 +197,20 @@ impl App {
 
         // To
 
-        if self.tableau[self.selected.0 as usize].len() == 0 {
+        if self.tableau.cards[self.selected.0 as usize].len() == 0 {
             if active_card.rank != 13 {
                 return;
             } else {
-                self.tableau[self.selected.0 as usize].push(Some(active_card));
-                if self.tableau_cutoffs[active_tableau as usize] > 0
-                    && self.tableau_cutoffs[active_tableau as usize] as usize
-                        == self.tableau[active_tableau as usize].len() - 1
-                {
-                    self.tableau_cutoffs[active_tableau as usize] -= 1;
-                }
-                self.tableau[active_tableau as usize].pop();
-                self.active = Some(self.selected);
+                self.tableau.add_card(self.selected, active_card);
+                self.tableau.update_cutoffs(active_position);
+                self.tableau.cards[active_position.0 as usize].pop();
+                self.active = None;
                 return;
             }
         }
 
-        let selected_card: Card = match self.tableau[self.selected.0 as usize]
-            [self.tableau[self.selected.0 as usize].len() - 1]
-        {
-            Some(card) => card,
+        let selected_card: Card = match self.tableau.get_top_card(self.selected) {
+            Some(tableau_card) => tableau_card,
             _ => return,
         };
 
@@ -242,16 +224,11 @@ impl App {
             return;
         }
 
-        self.tableau[self.selected.0 as usize].push(Some(active_card));
-        if self.tableau_cutoffs[active_tableau as usize] > 0
-            && self.tableau_cutoffs[active_tableau as usize] as usize
-                == self.tableau[active_tableau as usize].len() - 1
-        {
-            self.tableau_cutoffs[active_tableau as usize] -= 1;
-        }
-        self.tableau[active_tableau as usize].pop();
+        self.tableau.add_card(self.selected, active_card);
+        self.tableau.update_cutoffs(active_position);
+        self.tableau.cards[active_position.0 as usize].pop();
 
-        self.active = Some(self.selected);
+        self.active = None;
     }
 
     fn on_tick(&mut self) {
@@ -288,11 +265,9 @@ impl App {
     }
 
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let visible_cards: Vec<Option<Card>> = self.tableau[pos.0 as usize]
-            [(self.tableau_cutoffs[pos.0 as usize] as usize)..]
-            .to_vec();
+        let visible_cards: Vec<Card> = self.tableau.get_visible_cards(pos.0);
 
-        let card_text = format!("Hidden cards: {}", self.tableau_cutoffs[pos.0 as usize]);
+        let card_text = format!("Hidden cards: {}", self.tableau.cutoffs[pos.0 as usize]);
 
         Canvas::default()
             .block(
@@ -305,15 +280,12 @@ impl App {
             .paint(move |ctx| {
                 ctx.layer();
                 for (i, card) in visible_cards.iter().enumerate() {
-                    let card_name: String = match card {
-                        Some(card) => get_card(card.suit, card.rank),
-                        None => "Stock empty".to_string(),
-                    };
+                    let card_name = get_card(card.suit, card.rank);
 
                     ctx.print(
                         10.0,
                         i as f64 * 10.0,
-                        Span::styled(format!("{}", card_name), self.card_text_style(*card)),
+                        Span::styled(format!("{}", card_name), self.card_text_style(Some(*card))),
                     );
                 }
             })
