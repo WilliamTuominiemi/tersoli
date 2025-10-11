@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use crate::card::Card;
 
 pub struct Waste {
@@ -23,6 +25,21 @@ impl Waste {
         }
 
         self.cards.last().copied()
+    }
+
+    pub fn get_last_cards(&self) -> Vec<Card> {
+        if self.cards.len() == 0 {
+            return vec![];
+        }
+
+        let amount_to_take = min(self.cards.len(), 3);
+
+        self.cards
+            .iter()
+            .rev()
+            .take(amount_to_take)
+            .copied()
+            .collect()
     }
 
     pub fn reset(&mut self) {

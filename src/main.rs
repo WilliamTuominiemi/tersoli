@@ -129,7 +129,7 @@ impl App {
     }
 
     fn place_in_foundation(&mut self) {
-        let mut active_position: (i8, i8);
+        let active_position: (i8, i8);
         let card: Card = match self.active {
             Some(active) => {
                 active_position = active;
@@ -300,10 +300,7 @@ impl App {
     }
 
     fn waste_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_name: String = match self.waste.get_top_card() {
-            Some(card) => get_card(card.suit, card.rank),
-            None => "Empty".to_string(),
-        };
+        let cards = self.waste.get_last_cards();
 
         Canvas::default()
             .block(
@@ -315,14 +312,19 @@ impl App {
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
                 ctx.layer();
-                ctx.print(
-                    10.0,
-                    50.0,
-                    Span::styled(
-                        format!("{}", card_name),
-                        card_text_style(self.waste.get_top_card()),
-                    ),
-                );
+                if cards.len() == 0 {
+                    ctx.print(10.0, 50.0, Span::styled("Empty", card_text_style(None)));
+                } else {
+                    for (i, card) in cards.iter().enumerate() {
+                        let card_name = get_card(card.suit, card.rank);
+
+                        ctx.print(
+                            10.0,
+                            i as f64 * 10.0,
+                            Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
+                        );
+                    }
+                }
             })
     }
 
