@@ -21,6 +21,9 @@ use stock::Stock;
 mod tableau;
 use tableau::Tableau;
 
+mod waste;
+use waste::Waste;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
@@ -34,8 +37,7 @@ struct App {
     selected: (i8, i8),
     active: Option<(i8, i8)>,
     stock: Stock,
-    drawn: Stock,
-    stock_face: Option<Card>,
+    waste: Waste,
     tableau: Tableau,
     foundations: Vec<u8>,
 }
@@ -48,8 +50,7 @@ impl App {
             selected: (0, 0),
             active: None,
             stock: Stock::new(),
-            drawn: Stock::new(),
-            stock_face: None,
+            waste: Waste::new(),
             tableau: Tableau::new(),
             foundations: vec![0, 0, 0, 0],
         }
@@ -59,7 +60,7 @@ impl App {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
 
-        self.first_deal();
+        self.tableau.initialize(&mut self.stock);
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -80,35 +81,34 @@ impl App {
         Ok(())
     }
 
-    fn first_deal(&mut self) {
-        let dealt_card = self.stock.deal();
-        self.stock_face = Some(dealt_card);
-        self.drawn.cards = vec![];
-        self.drawn.cards.push(dealt_card);
-
-        self.tableau.initialize(&mut self.stock);
-    }
-
     fn draw_new(&mut self) {
         if self.stock.cards.len() == 0 {
-            self.stock.cards = self.drawn.cards.clone();
-            self.drawn.cards = vec![];
+            self.stock.reset(&self.waste);
+            self.waste.reset();
         }
 
         let new_card = self.stock.deal();
-        self.stock_face = Some(new_card);
-        self.drawn.cards.push(new_card);
+        self.waste.add(new_card);
     }
 
-    fn take_from_drawn(&mut self) {
-        let card_to_place = match self.stock_face {
+    fn take_from_waste(&mut self) {
+        let card_to_place = match self.waste.get_top_card() {
             Some(card) => card,
             _ => return,
         };
 
         let card_to_add_to = match self.tableau.get_top_card(self.selected) {
             Some(card) => card,
-            _ => return,
+            _ => {
+                if card_to_place.rank == 13 {
+                    self.tableau.add_card(self.selected, card_to_place);
+                    self.waste.cards.pop();
+                    self.active = None;
+                    return;
+                } else {
+                    return;
+                }
+            }
         };
 
         if card_to_add_to.suit % 2 == card_to_place.suit % 2 {
@@ -123,9 +123,7 @@ impl App {
 
         self.tableau.add_card(self.selected, card_to_place);
 
-        self.drawn.cards.pop();
-
-        self.stock_face = Some(self.stock.deal());
+        self.waste.cards.pop();
 
         self.active = None;
     }
@@ -141,7 +139,7 @@ impl App {
                         _ => return,
                     }
                 } else if active.1 == 0 && active.0 == 1 {
-                    if let Some(card) = self.stock_face {
+                    if let Some(card) = self.waste.get_top_card() {
                         card
                     } else {
                         return;
@@ -170,11 +168,9 @@ impl App {
         self.foundations[(card.suit - 1) as usize] = card.rank;
 
         if active_position.1 == 0 && active_position.0 == 1 {
-            self.stock_face = Some(self.stock.deal());
+            self.waste.remove();
         } else {
-            if self.tableau.cutoffs[active_position.0 as usize] > 0 {
-                self.tableau.cutoffs[active_position.0 as usize] -= 1;
-            }
+            self.tableau.update_cutoffs(active_position);
             self.tableau.cards[active_position.0 as usize].pop();
         }
 
@@ -182,7 +178,6 @@ impl App {
     }
 
     fn move_between_tableau(&mut self) {
-        // From
         let active_position;
         let active_card = match self.active {
             Some(active) => {
@@ -195,15 +190,13 @@ impl App {
             _ => return,
         };
 
-        // To
         if self.tableau.cards[self.selected.0 as usize].len() == 0 {
-            if active_card.rank != 13 {
-                return;
-            } else {
+            if active_card.rank == 13 {
                 self.tableau.add_card(self.selected, active_card);
                 self.tableau.update_cutoffs(active_position);
                 self.tableau.cards[active_position.0 as usize].pop();
                 self.active = None;
+            } else {
                 return;
             }
         }
@@ -242,12 +235,12 @@ impl App {
         let vertical = Layout::vertical(vertical_constraints);
 
         let [top, bottom] = vertical.areas(frame.area());
-        let [stock, drawn, second_empty, spades, hearts, clubs, diamonds] = horizontal.areas(top);
+        let [stock, waste, second_empty, spades, hearts, clubs, diamonds] = horizontal.areas(top);
 
         let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
         frame.render_widget(self.stock_canvas((0, 0)), stock);
-        frame.render_widget(self.drawn_canvas((1, 0)), drawn);
+        frame.render_widget(self.waste_canvas((1, 0)), waste);
         frame.render_widget(self.empty_canvas((2, 0)), second_empty);
         frame.render_widget(self.foundation_canvas((3, 0)), spades);
         frame.render_widget(self.foundation_canvas((4, 0)), hearts);
@@ -306,16 +299,16 @@ impl App {
             .paint(|_ctx| {})
     }
 
-    fn drawn_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_name: String = match self.stock_face {
+    fn waste_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
+        let card_name: String = match self.waste.get_top_card() {
             Some(card) => get_card(card.suit, card.rank),
-            None => "Stock empty".to_string(),
+            None => "Empty".to_string(),
         };
 
         Canvas::default()
             .block(
                 Block::bordered()
-                    .title("Drawn cards")
+                    .title("Waste pile")
                     .border_style(self.canvas_style(pos)),
             )
             .x_bounds([0.0, 100.0])
@@ -327,7 +320,7 @@ impl App {
                     50.0,
                     Span::styled(
                         format!("{}", card_name),
-                        self.card_text_style(self.stock_face),
+                        self.card_text_style(self.waste.get_top_card()),
                     ),
                 );
             })
@@ -403,7 +396,7 @@ impl App {
                         if self.selected == (0, 0) {
                             self.draw_new();
                         } else if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
-                            self.take_from_drawn();
+                            self.take_from_waste();
                         } else if self.selected.1 == 0 && self.selected.0 > 2 {
                             self.place_in_foundation();
                         } else if self.selected.1 == 1 && active_card.1 == 1 {

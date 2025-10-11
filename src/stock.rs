@@ -1,6 +1,6 @@
 use rand::prelude::*;
 
-use crate::card::Card;
+use crate::{card::Card, waste::Waste};
 
 pub struct Stock {
     pub cards: Vec<Card>,
@@ -22,5 +22,9 @@ impl Stock {
 
     pub fn deal(&mut self) -> Card {
         self.cards.pop().expect("No more cards in stock")
+    }
+
+    pub fn reset(&mut self, waste: &Waste) {
+        self.cards = waste.cards.clone();
     }
 }
