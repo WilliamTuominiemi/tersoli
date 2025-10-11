@@ -4,7 +4,6 @@ use crate::card::Card;
 
 pub struct Stock {
     pub cards: Vec<Card>,
-    rng: ThreadRng,
 }
 
 impl Stock {
@@ -15,14 +14,10 @@ impl Stock {
                 new_stock.push(Card::new(i, j));
             }
         }
-        Self {
-            cards: new_stock,
-            rng: rand::rng(),
-        }
-    }
 
-    pub fn shuffle(&mut self) {
-        self.cards.shuffle(&mut self.rng);
+        new_stock.shuffle(&mut rand::rng());
+
+        Self { cards: new_stock }
     }
 
     pub fn deal(&mut self) -> Card {

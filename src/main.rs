@@ -58,7 +58,6 @@ impl App {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
 
-        self.stock.shuffle();
         self.first_deal();
 
         while !self.exit {
