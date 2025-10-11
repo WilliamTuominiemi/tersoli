@@ -196,7 +196,6 @@ impl App {
         };
 
         // To
-
         if self.tableau.cards[self.selected.0 as usize].len() == 0 {
             if active_card.rank != 13 {
                 return;
@@ -341,25 +340,10 @@ impl App {
     fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let suit_index = pos.0 - 3;
 
-        let suit = match suit_index {
-            0 => "♠".to_string(),
-            1 => "♥".to_string(),
-            2 => "♣".to_string(),
-            3 => "♦".to_string(),
-            _ => "Error".to_string(),
-        };
-
-        let number = match self.foundations[suit_index as usize] {
-            0 => "".to_string(),
-            1 => "Ace".to_string(),
-            2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => self.foundations[suit_index as usize].to_string(),
-            11 => "Jack".to_string(),
-            12 => "Queen".to_string(),
-            13 => "King".to_string(),
-            _ => "Error".to_string(),
-        };
-
-        let card_name = format!("{} {}", suit, number);
+        let card_name = get_card(
+            (suit_index + 1) as u8,
+            self.foundations[suit_index as usize],
+        );
 
         Canvas::default()
             .block(

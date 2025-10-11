@@ -8,6 +8,7 @@ pub fn get_card(suit: u8, card: u8) -> String {
     };
 
     let card_str = match card {
+        0 => "".to_string(),
         1 => "Ace".to_string(),
         2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => card.to_string(),
         11 => "Jack".to_string(),
