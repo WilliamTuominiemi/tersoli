@@ -279,7 +279,7 @@ impl App {
 
                     ctx.print(
                         10.0,
-                        i as f64 * 10.0,
+                        100.0 - i as f64 * 7.6,
                         Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
                     );
                 }
@@ -323,7 +323,7 @@ impl App {
 
                         ctx.print(
                             10.0,
-                            i as f64 * 10.0,
+                            100.0 - i as f64 * 7.6,
                             Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
                         );
                     }
