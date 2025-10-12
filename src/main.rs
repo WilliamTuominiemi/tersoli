@@ -197,15 +197,36 @@ impl App {
         let selected_card: Card = match self.tableau.get_top_card(self.selected) {
             Some(tableau_card) => tableau_card,
             _ => {
-                if active_card.rank == 13 {
-                    self.tableau.add_card(self.selected, active_card);
-                    self.tableau.update_cutoffs(active_position);
-                    self.tableau.cards[active_position.0 as usize].pop();
-                    self.active = None;
-                    return;
-                } else {
-                    return;
+                let needed_rank = 13;
+                let needed_suit = (0, 1);
+                let card_index =
+                    match self
+                        .tableau
+                        .find_card(active_position, needed_rank, needed_suit.0)
+                    {
+                        Some(index) => index,
+                        _ => {
+                            match self.tableau.find_card(
+                                active_position,
+                                needed_rank,
+                                needed_suit.1,
+                            ) {
+                                Some(index) => index,
+                                _ => return,
+                            }
+                        }
+                    };
+
+                let cards_to_move = self
+                    .tableau
+                    .take_cards_at_index(active_position, card_index);
+
+                for card in cards_to_move {
+                    self.tableau.add_card(self.selected, card);
                 }
+
+                self.active = None;
+                return;
             }
         };
 
