@@ -221,7 +221,6 @@ impl App {
 
         for card in cards_to_move {
             self.tableau.add_card(self.selected, card);
-            self.tableau.update_cutoffs(active_position);
         }
 
         self.active = None;

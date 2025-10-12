@@ -44,10 +44,15 @@ impl Tableau {
     }
 
     pub fn take_cards_at_index(&mut self, position: (i8, i8), index: usize) -> Vec<Card> {
-        if position.0 as usize >= self.cards.len() || index > self.cards[position.0 as usize].len()
-        {
+        let column = position.0 as usize;
+        if column >= self.cards.len() || index > self.cards[column].len() {
             return vec![];
         }
+
+        if self.cutoffs[column] > 0 {
+            self.cutoffs[column] -= 1;
+        }
+
         self.cards[position.0 as usize].split_off(index)
     }
 
