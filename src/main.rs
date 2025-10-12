@@ -24,6 +24,9 @@ use tableau::Tableau;
 mod waste;
 use waste::Waste;
 
+mod foundation;
+use foundation::Foundation;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
@@ -39,7 +42,7 @@ struct App {
     stock: Stock,
     waste: Waste,
     tableau: Tableau,
-    foundations: Vec<u8>,
+    foundations: Foundation,
 }
 
 impl App {
@@ -52,7 +55,7 @@ impl App {
             stock: Stock::new(),
             waste: Waste::new(),
             tableau: Tableau::new(),
-            foundations: vec![0, 0, 0, 0],
+            foundations: Foundation::new(),
         }
     }
 
@@ -162,14 +165,14 @@ impl App {
             return;
         };
 
-        let current_value = self.foundations[(card.suit - 1) as usize];
+        let current_value = self.foundations.get_top_value(self.selected);
 
         if card.rank != current_value + 1 {
             self.active = Some(self.selected);
             return;
         };
 
-        self.foundations[(card.suit - 1) as usize] = card.rank;
+        self.foundations.add_card(card);
 
         if active_position.1 == 0 && active_position.0 == 1 {
             self.waste.remove();
@@ -181,11 +184,43 @@ impl App {
         self.active = None;
     }
 
+    fn take_from_foundation(&mut self) {
+        let active_position: (i8, i8);
+        let foundation_card = match self.active {
+            Some(position) => {
+                active_position = position;
+                match self.foundations.get_top_card(position) {
+                    Some(card) => card,
+                    _ => return,
+                }
+            }
+            _ => return,
+        };
+
+        let tableau_card = self.tableau.get_top_card(self.selected);
+        match tableau_card {
+            Some(card) => {
+                if card.suit % 2 == foundation_card.suit % 2 {
+                    self.active = Some(self.selected);
+                    return;
+                }
+
+                if card.rank != foundation_card.rank + 1 {
+                    self.active = Some(self.selected);
+                    return;
+                }
+
+                self.tableau.add_card(self.selected, foundation_card);
+                self.foundations.remove_card(active_position);
+                self.active = None;
+            }
+            _ => return,
+        }
+    }
+
     fn move_between_tableau(&mut self) {
         let active_position = match self.active {
-            Some(active) => {
-                active
-            }
+            Some(active) => active,
             _ => return,
         };
 
@@ -282,7 +317,7 @@ impl App {
     fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let visible_cards: Vec<Card> = self.tableau.get_visible_cards(pos.0);
 
-        let card_text = format!("Hidden cards: {}", self.tableau.cutoffs[pos.0 as usize]);
+        let card_text = format!("Hidden: {}", self.tableau.cutoffs[pos.0 as usize]);
 
         Canvas::default()
             .block(
@@ -309,7 +344,7 @@ impl App {
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let card_amount = self.stock.cards.len();
 
-        let card_text = format!("Cards in stock: {}", card_amount);
+        let card_text = format!("In stock: {}", card_amount);
 
         Canvas::default()
             .block(
@@ -358,10 +393,7 @@ impl App {
     fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
         let suit_index = pos.0 - 3;
 
-        let card_name = get_card(
-            (suit_index + 1) as u8,
-            self.foundations[suit_index as usize],
-        );
+        let card_name = get_card((suit_index + 1) as u8, self.foundations.get_top_value(pos));
 
         Canvas::default()
             .block(
@@ -422,6 +454,8 @@ impl App {
                             self.draw_new();
                         } else if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
                             self.take_from_waste();
+                        } else if active_card.1 == 0 && active_card.0 > 2 && self.selected.1 == 1 {
+                            self.take_from_foundation();
                         } else if self.selected.1 == 0 && self.selected.0 > 2 {
                             self.place_in_foundation();
                         } else if self.selected.1 == 1 && active_card.1 == 1 {
