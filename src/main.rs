@@ -182,14 +182,9 @@ impl App {
     }
 
     fn move_between_tableau(&mut self) {
-        let active_position;
-        let active_card = match self.active {
+        let active_position = match self.active {
             Some(active) => {
-                active_position = active;
-                match self.tableau.get_top_card(active) {
-                    Some(tableau_card) => tableau_card,
-                    _ => return,
-                }
+                active
             }
             _ => return,
         };
@@ -384,9 +379,9 @@ impl App {
                     Span::styled(
                         format!("{}", card_name),
                         Style::default().fg(if pos.0 % 2 == 0 {
-                            Color::Red
+                            Color::LightRed
                         } else {
-                            Color::Blue
+                            Color::LightGreen
                         }),
                     ),
                 )

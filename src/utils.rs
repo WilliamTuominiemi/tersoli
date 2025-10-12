@@ -46,9 +46,9 @@ pub fn card_text_style(card: Option<Card>) -> Style {
     Style::default().fg(match card {
         Some(c) => {
             if c.suit % 2 == 0 {
-                Color::Red
+                Color::LightRed
             } else {
-                Color::Blue
+                Color::LightGreen
             }
         }
         _ => Color::Yellow,

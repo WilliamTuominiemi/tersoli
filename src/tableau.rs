@@ -49,7 +49,7 @@ impl Tableau {
             return vec![];
         }
 
-        if self.cutoffs[column] > 0 {
+        if self.cutoffs[column] > 0 && (index as u8) <= self.cutoffs[column] {
             self.cutoffs[column] -= 1;
         }
 
@@ -69,10 +69,11 @@ impl Tableau {
         if index >= self.cutoffs.len() || index >= self.cards.len() {
             return;
         }
+        
         let cutoff = self.cutoffs[index];
         let card_index = self.cards[index].len() as u8;
 
-        if cutoff > 0 && card_index > 0 {
+        if cutoff > 0 && card_index > 0 && cutoff == card_index - 1 {
             self.cutoffs[index] -= 1;
         }
     }
