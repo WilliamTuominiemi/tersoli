@@ -82,6 +82,10 @@ impl App {
     }
 
     fn draw_new(&mut self) {
+        if self.stock.cards.len() == 0 && self.waste.cards.len() == 0 {
+            return;
+        }
+
         if self.stock.cards.len() == 0 {
             self.stock.reset(&self.waste);
             self.waste.reset();
@@ -287,7 +291,7 @@ impl App {
     }
 
     fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_amount = self.stock.cards.len() + 1;
+        let card_amount = self.stock.cards.len();
 
         let card_text = format!("Cards in stock: {}", card_amount);
 

@@ -25,6 +25,6 @@ impl Stock {
     }
 
     pub fn reset(&mut self, waste: &Waste) {
-        self.cards = waste.cards.clone();
+        self.cards = waste.cards.iter().rev().cloned().collect();
     }
 }
