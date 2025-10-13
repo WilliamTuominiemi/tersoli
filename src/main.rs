@@ -339,12 +339,14 @@ impl App {
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
                 ctx.layer();
+                let amount_of_cards = visible_cards.len() as f64;
+
                 for (i, card) in visible_cards.iter().enumerate() {
                     let card_name = get_card(card.suit, card.rank);
 
                     ctx.print(
                         10.0,
-                        100.0 - i as f64 * 7.6,
+                        100.0 - (100.0 / (amount_of_cards) * i as f64),
                         Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
                     );
                 }
@@ -383,12 +385,12 @@ impl App {
                 if cards.len() == 0 {
                     ctx.print(10.0, 50.0, Span::styled("Empty", card_text_style(None)));
                 } else {
+                    let amount_of_cards = cards.len() as f64;
                     for (i, card) in cards.iter().enumerate() {
                         let card_name = get_card(card.suit, card.rank);
-
                         ctx.print(
                             10.0,
-                            100.0 - i as f64 * 7.6,
+                            100.0 - (100.0 / (amount_of_cards) * i as f64),
                             Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
                         );
                     }
