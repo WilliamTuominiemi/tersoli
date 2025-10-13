@@ -291,6 +291,33 @@ impl App {
         self.reset_selection();
     }
 
+    fn try_to_place_in_foundation(&mut self) {
+        let card_to_place = if self.selected.1 == 1 {
+            match self.tableau.get_top_card(self.selected) {
+                Some(tableau_card) => tableau_card,
+                _ => return,
+            }
+        } else if self.selected.1 == 0 && self.selected.0 == 1 {
+            match self.waste.get_top_card() {
+                Some(card) => card,
+                _ => return,
+            }
+        } else {
+            return;
+        };
+
+        if self.foundations.snap_add(card_to_place) {
+            if self.selected.1 == 1 {
+                self.tableau.update_cutoffs(self.selected);
+                self.tableau.cards[self.selected.0 as usize].pop();
+            } else {
+                self.waste.cards.pop();
+            }
+        }
+
+        self.reset_selection();
+    }
+
     fn on_tick(&mut self) {
         self.tick_count += 1;
     }
@@ -486,6 +513,7 @@ impl App {
                     }
                 }
             },
+            KeyCode::Char(' ') => self.try_to_place_in_foundation(),
             _ => {}
         }
     }

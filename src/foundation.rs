@@ -32,4 +32,22 @@ impl Foundation {
     pub fn remove_card(&mut self, position: (i8, i8)) {
         self.cards[(position.0 - 3) as usize].pop();
     }
+
+    pub fn snap_add(&mut self, card: Card) -> bool {
+        let idx = (card.suit - 1) as usize;
+        let foundation_card_rank = match self.cards[idx].last().copied() {
+            Some(foundation_card) => match foundation_card {
+                Some(foundation_card) => foundation_card.rank,
+                _ => 0,
+            },
+            _ => 0,
+        };
+
+        if foundation_card_rank != card.rank - 1 {
+            return false;
+        } else {
+            self.add_card(card);
+            return true;
+        }
+    }
 }
