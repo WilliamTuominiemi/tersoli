@@ -94,11 +94,11 @@ mod tests {
 
         assert_eq!(
             card_text_style(Some(card1)),
-            Style::default().fg(Color::Blue)
+            Style::default().fg(Color::LightGreen)
         );
         assert_eq!(
             card_text_style(Some(card2)),
-            Style::default().fg(Color::Red)
+            Style::default().fg(Color::LightRed)
         );
         Ok(())
     }

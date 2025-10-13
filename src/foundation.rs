@@ -1,4 +1,4 @@
-use crate::{card::Card, foundation};
+use crate::card::Card;
 
 pub struct Foundation {
     pub cards: Vec<Vec<Option<Card>>>,

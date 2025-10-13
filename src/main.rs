@@ -84,6 +84,10 @@ impl App {
         Ok(())
     }
 
+    fn reset_selection(&mut self) {
+        self.active = None
+    }
+
     fn draw_new(&mut self) {
         if self.stock.cards.len() == 0 && self.waste.cards.len() == 0 {
             return;
@@ -110,7 +114,7 @@ impl App {
                 if card_to_place.rank == 13 {
                     self.tableau.add_card(self.selected, card_to_place);
                     self.waste.cards.pop();
-                    self.active = None;
+                    self.reset_selection();
                     return;
                 } else {
                     return;
@@ -119,12 +123,12 @@ impl App {
         };
 
         if card_to_add_to.suit % 2 == card_to_place.suit % 2 {
-            self.active = Some(self.selected);
+            self.reset_selection();
             return;
         }
 
         if card_to_add_to.rank - 1 != card_to_place.rank {
-            self.active = Some(self.selected);
+            self.reset_selection();
             return;
         }
 
@@ -132,7 +136,7 @@ impl App {
 
         self.waste.cards.pop();
 
-        self.active = None;
+        self.reset_selection();
     }
 
     fn place_in_foundation(&mut self) {
@@ -161,14 +165,14 @@ impl App {
         let selected_foundation = self.selected.0 - 2;
 
         if selected_foundation != card.suit as i8 {
-            self.active = Some(self.selected);
+            self.reset_selection();
             return;
         };
 
         let current_value = self.foundations.get_top_value(self.selected);
 
         if card.rank != current_value + 1 {
-            self.active = Some(self.selected);
+            self.reset_selection();
             return;
         };
 
@@ -181,7 +185,7 @@ impl App {
             self.tableau.cards[active_position.0 as usize].pop();
         }
 
-        self.active = None;
+        self.reset_selection();
     }
 
     fn take_from_foundation(&mut self) {
@@ -201,18 +205,18 @@ impl App {
         match tableau_card {
             Some(card) => {
                 if card.suit % 2 == foundation_card.suit % 2 {
-                    self.active = Some(self.selected);
+                    self.reset_selection();
                     return;
                 }
 
                 if card.rank != foundation_card.rank + 1 {
-                    self.active = Some(self.selected);
+                    self.reset_selection();
                     return;
                 }
 
                 self.tableau.add_card(self.selected, foundation_card);
                 self.foundations.remove_card(active_position);
-                self.active = None;
+                self.reset_selection();
             }
             _ => return,
         }
@@ -242,7 +246,10 @@ impl App {
                                 needed_suit.1,
                             ) {
                                 Some(index) => index,
-                                _ => return,
+                                _ => {
+                                    self.reset_selection();
+                                    return;
+                                }
                             }
                         }
                     };
@@ -255,7 +262,7 @@ impl App {
                     self.tableau.add_card(self.selected, card);
                 }
 
-                self.active = None;
+                self.reset_selection();
                 return;
             }
         };
@@ -267,7 +274,10 @@ impl App {
             .find_card(active_position, needed_rank, needed_suit)
         {
             Some(index) => index,
-            _ => return,
+            _ => {
+                self.reset_selection();
+                return;
+            }
         };
 
         let cards_to_move = self
@@ -278,7 +288,7 @@ impl App {
             self.tableau.add_card(self.selected, card);
         }
 
-        self.active = None;
+        self.reset_selection();
     }
 
     fn on_tick(&mut self) {
@@ -448,7 +458,7 @@ impl App {
             KeyCode::Enter => match self.active {
                 Some(active_card) => {
                     if active_card == self.selected {
-                        self.active = None;
+                        self.reset_selection();
                     } else {
                         if self.selected == (0, 0) {
                             self.draw_new();
