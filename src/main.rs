@@ -89,17 +89,16 @@ impl App {
     }
 
     fn draw_new(&mut self) {
-        if self.stock.cards.len() == 0 && self.waste.cards.len() == 0 {
+        if self.stock.cards.is_empty() && self.waste.cards.is_empty() {
             return;
         }
 
-        if self.stock.cards.len() == 0 {
+        if self.stock.cards.is_empty() {
             self.stock.reset(&self.waste);
             self.waste.reset();
         }
 
-        let new_card = self.stock.deal();
-        self.waste.add(new_card);
+        self.waste.add(self.stock.deal());
     }
 
     fn take_from_waste(&mut self) {
@@ -138,27 +137,13 @@ impl App {
             _ => return,
         };
 
-        let selected_foundation = self.selected.0 - 2;
-
-        if selected_foundation != card.suit as i8 {
-            self.reset_selection();
-            return;
-        };
-
-        let current_value = self.foundations.get_top_value(self.selected);
-
-        if card.rank != current_value + 1 {
-            self.reset_selection();
-            return;
-        };
-
-        self.foundations.add_card(card);
-
-        if active_position.1 == 0 && active_position.0 == 1 {
-            self.waste.remove();
-        } else {
-            self.tableau.update_cutoffs(active_position);
-            self.tableau.cards[active_position.0 as usize].pop();
+        if self.foundations.add_card(card, (self.selected.0 - 2) as u8) {
+            if active_position.1 == 0 && active_position.0 == 1 {
+                self.waste.remove();
+            } else {
+                self.tableau.update_cutoffs(active_position);
+                self.tableau.cards[active_position.0 as usize].pop();
+            }
         }
 
         self.reset_selection();
@@ -314,7 +299,7 @@ impl App {
             .y_bounds([0.0, 100.0])
             .paint(move |ctx| {
                 ctx.layer();
-                if cards.len() == 0 {
+                if cards.is_empty() {
                     ctx.print(10.0, 50.0, Span::styled("Empty", card_text_style(None)));
                 } else {
                     let amount_of_cards = cards.len() as f64;

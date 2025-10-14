@@ -20,7 +20,7 @@ impl Waste {
     }
 
     pub fn get_top_card(&self) -> Option<Card> {
-        if self.cards.len() == 0 {
+        if self.cards.is_empty() {
             return None;
         }
 
@@ -28,7 +28,7 @@ impl Waste {
     }
 
     pub fn get_last_cards(&self) -> Vec<Card> {
-        if self.cards.len() == 0 {
+        if self.cards.is_empty() {
             return vec![];
         }
 

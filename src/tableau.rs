@@ -26,7 +26,7 @@ impl Tableau {
     }
 
     pub fn get_top_card(&mut self, position: (i8, i8)) -> Option<Card> {
-        if self.cards[position.0 as usize].len() == 0 {
+        if self.cards[position.0 as usize].is_empty() {
             return None;
         }
 

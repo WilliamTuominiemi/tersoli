@@ -18,6 +18,13 @@ impl Foundation {
         }
     }
 
+    pub fn get_top_card_by_suit(&self, suit: u8) -> Option<Card> {
+        match self.cards[(suit - 1) as usize].last().copied() {
+            Some(card) => card,
+            _ => None,
+        }
+    }
+
     pub fn get_top_value(&self, position: (i8, i8)) -> u8 {
         match self.get_top_card(position) {
             Some(card) => card.rank,
@@ -25,8 +32,28 @@ impl Foundation {
         }
     }
 
-    pub fn add_card(&mut self, card: Card) {
-        self.cards[(card.suit - 1) as usize].push(Some(card))
+    pub fn add_card(&mut self, card: Card, to_suit: u8) -> bool {
+        if card.suit != to_suit {
+            return false;
+        }
+
+        let parent_card = match self.get_top_card_by_suit(card.suit) {
+            Some(parent) => parent,
+            _ => {
+                if card.rank == 1 {
+                    self.cards[(card.suit - 1) as usize].push(Some(card));
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        if card.rank != parent_card.rank + 1 {
+            return false;
+        }
+
+        self.cards[(card.suit - 1) as usize].push(Some(card));
+        return true;
     }
 
     pub fn remove_card(&mut self, position: (i8, i8)) {
@@ -46,7 +73,7 @@ impl Foundation {
         if foundation_card_rank != card.rank - 1 {
             return false;
         } else {
-            self.add_card(card);
+            self.add_card(card, card.suit);
             return true;
         }
     }
