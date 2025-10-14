@@ -108,33 +108,9 @@ impl App {
             _ => return,
         };
 
-        let card_to_add_to = match self.tableau.get_top_card(self.selected) {
-            Some(card) => card,
-            _ => {
-                if card_to_place.rank == 13 {
-                    self.tableau.add_card(self.selected, card_to_place);
-                    self.waste.cards.pop();
-                    self.reset_selection();
-                    return;
-                } else {
-                    return;
-                }
-            }
-        };
-
-        if card_to_add_to.suit % 2 == card_to_place.suit % 2 {
-            self.reset_selection();
-            return;
+        if self.tableau.add_card(self.selected, card_to_place) {
+            self.waste.cards.pop();
         }
-
-        if card_to_add_to.rank - 1 != card_to_place.rank {
-            self.reset_selection();
-            return;
-        }
-
-        self.tableau.add_card(self.selected, card_to_place);
-
-        self.waste.cards.pop();
 
         self.reset_selection();
     }
@@ -201,25 +177,11 @@ impl App {
             _ => return,
         };
 
-        let tableau_card = self.tableau.get_top_card(self.selected);
-        match tableau_card {
-            Some(card) => {
-                if card.suit % 2 == foundation_card.suit % 2 {
-                    self.reset_selection();
-                    return;
-                }
-
-                if card.rank != foundation_card.rank + 1 {
-                    self.reset_selection();
-                    return;
-                }
-
-                self.tableau.add_card(self.selected, foundation_card);
-                self.foundations.remove_card(active_position);
-                self.reset_selection();
-            }
-            _ => return,
+        if self.tableau.add_card(self.selected, foundation_card) {
+            self.foundations.remove_card(active_position);
         }
+
+        self.reset_selection();
     }
 
     fn move_between_tableau(&mut self) {

@@ -62,8 +62,28 @@ impl Tableau {
         self.cards[position.0 as usize].split_off(index)
     }
 
-    pub fn add_card(&mut self, position: (i8, i8), card: Card) {
-        self.cards[position.0 as usize].push(card);
+    pub fn add_card(&mut self, to: (i8, i8), card: Card) -> bool {
+        let parent_card = match self.get_top_card(to) {
+            Some(parent) => parent,
+            _ => {
+                if card.rank == 13 {
+                    self.cards[to.0 as usize].push(card);
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        if card.suit % 2 == parent_card.suit % 2 {
+            return false;
+        }
+
+        if card.rank != parent_card.rank - 1 {
+            return false;
+        }
+
+        self.cards[to.0 as usize].push(card);
+        return true;
     }
 
     pub fn get_visible_cards(&self, column: i8) -> Vec<Card> {
@@ -106,11 +126,6 @@ impl Tableau {
     }
 
     pub fn try_to_move_between_tableu(&mut self, from: (i8, i8), to: (i8, i8)) {
-        let from_card: Card = match self.get_top_card(from) {
-            Some(card) => card,
-            _ => return,
-        };
-
         let to_card: Card = match self.get_top_card(to) {
             Some(card) => card,
             _ => {
