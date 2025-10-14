@@ -355,25 +355,27 @@ impl App {
         }
         match key.code {
             KeyCode::Char('q') => self.exit = true,
-            KeyCode::Left => {
+            KeyCode::Left | KeyCode::Char('a') => {
                 self.selected.0 = cmp::min(cmp::max(0, self.selected.0 - 1), 6);
                 if self.selected == (2, 0) {
                     self.selected = (1, 0);
                 }
             }
-            KeyCode::Right => {
+            KeyCode::Right | KeyCode::Char('d') => {
                 self.selected.0 = cmp::min(cmp::max(0, self.selected.0 + 1), 6);
                 if self.selected == (2, 0) {
                     self.selected = (3, 0);
                 }
             }
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('w') => {
                 self.selected.1 = cmp::min(cmp::max(0, self.selected.1 - 1), 1);
                 if self.selected == (2, 0) {
                     self.selected = (3, 0);
                 }
             }
-            KeyCode::Down => self.selected.1 = cmp::min(cmp::max(0, self.selected.1 + 1), 1),
+            KeyCode::Down | KeyCode::Char('s') => {
+                self.selected.1 = cmp::min(cmp::max(0, self.selected.1 + 1), 1)
+            }
             KeyCode::Enter => match self.active {
                 Some(active_card) => {
                     if active_card == self.selected {
