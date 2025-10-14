@@ -33,13 +33,19 @@ impl Tableau {
         self.cards[position.0 as usize].last().copied()
     }
 
-    pub fn find_card(&self, position: (i8, i8), rank: u8, suit: u8) -> Option<usize> {
+    pub fn find_card(&self, position: (i8, i8), rank: u8, suit: Option<u8>) -> Option<usize> {
         let visible = self.cutoffs[position.0 as usize] as usize;
         self.cards[position.0 as usize]
             .iter()
             .enumerate()
             .skip(visible)
-            .position(|(_, &card)| card.rank == rank && card.suit % 2 == suit)
+            .position(|(_, &card)| {
+                card.rank == rank
+                    && match suit {
+                        Some(s) => card.suit % 2 == s,
+                        None => true,
+                    }
+            })
             .map(|index| index + visible)
     }
 
@@ -69,12 +75,53 @@ impl Tableau {
         if index >= self.cutoffs.len() || index >= self.cards.len() {
             return;
         }
-        
+
         let cutoff = self.cutoffs[index];
         let card_index = self.cards[index].len() as u8;
 
         if cutoff > 0 && card_index > 0 && cutoff == card_index - 1 {
             self.cutoffs[index] -= 1;
         }
+    }
+
+    fn move_cards(
+        &mut self,
+        needed_rank: u8,
+        needed_suit: Option<u8>,
+        from: (i8, i8),
+        to: (i8, i8),
+    ) {
+        let card_index = match self.find_card(from, needed_rank, needed_suit) {
+            Some(index) => index,
+            _ => return,
+        };
+
+        let cards_to_move = self.take_cards_at_index(from, card_index);
+
+        for card in cards_to_move {
+            self.add_card(to, card);
+        }
+
+        return;
+    }
+
+    pub fn try_to_move_between_tableu(&mut self, from: (i8, i8), to: (i8, i8)) {
+        let from_card: Card = match self.get_top_card(from) {
+            Some(card) => card,
+            _ => return,
+        };
+
+        let to_card: Card = match self.get_top_card(to) {
+            Some(card) => card,
+            _ => {
+                self.move_cards(13, None, from, to);
+                return;
+            }
+        };
+
+        let needed_rank = to_card.rank - 1;
+        let needed_suit = (to_card.suit + 1) % 2;
+
+        self.move_cards(needed_rank, Some(needed_suit), from, to);
     }
 }

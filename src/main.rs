@@ -228,65 +228,8 @@ impl App {
             _ => return,
         };
 
-        let selected_card: Card = match self.tableau.get_top_card(self.selected) {
-            Some(tableau_card) => tableau_card,
-            _ => {
-                let needed_rank = 13;
-                let needed_suit = (0, 1);
-                let card_index =
-                    match self
-                        .tableau
-                        .find_card(active_position, needed_rank, needed_suit.0)
-                    {
-                        Some(index) => index,
-                        _ => {
-                            match self.tableau.find_card(
-                                active_position,
-                                needed_rank,
-                                needed_suit.1,
-                            ) {
-                                Some(index) => index,
-                                _ => {
-                                    self.reset_selection();
-                                    return;
-                                }
-                            }
-                        }
-                    };
-
-                let cards_to_move = self
-                    .tableau
-                    .take_cards_at_index(active_position, card_index);
-
-                for card in cards_to_move {
-                    self.tableau.add_card(self.selected, card);
-                }
-
-                self.reset_selection();
-                return;
-            }
-        };
-
-        let needed_rank = selected_card.rank - 1;
-        let needed_suit = (selected_card.suit + 1) % 2;
-        let card_index = match self
-            .tableau
-            .find_card(active_position, needed_rank, needed_suit)
-        {
-            Some(index) => index,
-            _ => {
-                self.reset_selection();
-                return;
-            }
-        };
-
-        let cards_to_move = self
-            .tableau
-            .take_cards_at_index(active_position, card_index);
-
-        for card in cards_to_move {
-            self.tableau.add_card(self.selected, card);
-        }
+        self.tableau
+            .try_to_move_between_tableu(active_position, self.selected);
 
         self.reset_selection();
     }
