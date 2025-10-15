@@ -16,3 +16,11 @@ Do you want to play a game but look like you're working hard?
 - "Activate" on stock pile to get more cards to the waste pile
 
 ![demo](demo.gif)
+
+# Installation and usage
+
+*Rust and Cargo are required to be installed*
+
+Run ``cargo install --path .`` in this project root.
+
+After this type **tersoli** into your terminal to launch the game whenever you want.
