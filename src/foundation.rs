@@ -81,8 +81,6 @@ impl Foundation {
 
 #[cfg(test)]
 mod tests {
-    use crate::foundation;
-
     use super::*;
 
     fn mock_foundation() -> Foundation {

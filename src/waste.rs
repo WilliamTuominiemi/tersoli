@@ -46,3 +46,81 @@ impl Waste {
         self.cards = vec![];
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mock_waste() -> Waste {
+        Waste::new()
+    }
+
+    #[test]
+    fn test_add() {
+        let mut waste = mock_waste();
+
+        waste.add(Card::new(1, 5));
+
+        assert_eq!(waste.cards[0].suit, 1);
+        assert_eq!(waste.cards[0].rank, 5);
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut waste = mock_waste();
+        waste.add(Card::new(1, 5));
+        waste.remove();
+        assert_eq!(waste.cards.len(), 0);
+    }
+
+    #[test]
+    fn test_get_top_card() {
+        let mut waste = mock_waste();
+
+        let waste_card = Card::new(3, 8);
+        waste.add(waste_card);
+
+        match waste.get_top_card() {
+            Some(card) => {
+                assert_eq!(card.rank, waste_card.rank);
+                assert_eq!(card.suit, waste_card.suit);
+            }
+            _ => panic!("Couldn't get top card"),
+        }
+    }
+
+    #[test]
+    fn test_get_last_cards() {
+        let mut waste = mock_waste();
+
+        waste.add(Card::new(3, 8));
+        waste.add(Card::new(2, 11));
+        waste.add(Card::new(2, 6));
+        waste.add(Card::new(1, 1));
+
+        let last_cards = waste.get_last_cards();
+
+        assert_eq!(last_cards.len(), 3);
+
+        assert_eq!(last_cards[0].suit, 1);
+        assert_eq!(last_cards[0].rank, 1);
+
+        assert_eq!(last_cards[1].suit, 2);
+        assert_eq!(last_cards[1].rank, 6);
+
+        assert_eq!(last_cards[2].suit, 2);
+        assert_eq!(last_cards[2].rank, 11);
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut waste = mock_waste();
+
+        waste.add(Card::new(3, 8));
+        waste.add(Card::new(2, 11));
+
+        waste.reset();
+
+        assert_eq!(waste.cards.len(), 0);
+    }
+}
