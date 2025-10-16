@@ -60,14 +60,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_card() -> Result<(), String> {
+    fn test_get_card() {
         assert_eq!(get_card(3, 8), "8 ♣");
         assert_eq!(get_card(1, 13), "King ♠");
-        Ok(())
     }
 
     #[test]
-    fn test_canvas_style() -> Result<(), Style> {
+    fn test_canvas_style() {
         assert_eq!(
             canvas_style((0, 0), (0, 0), Some((0, 0))),
             Style::default().fg(Color::Green)
@@ -84,11 +83,10 @@ mod tests {
             canvas_style((0, 0), (2, 0), Some((1, 1))),
             Style::default().fg(Color::White)
         );
-        Ok(())
     }
 
     #[test]
-    fn test_card_text_style() -> Result<(), Style> {
+    fn test_card_text_style() {
         let card1 = Card::new(1, 1);
         let card2 = Card::new(2, 2);
 
@@ -100,6 +98,5 @@ mod tests {
             card_text_style(Some(card2)),
             Style::default().fg(Color::LightRed)
         );
-        Ok(())
     }
 }

@@ -33,7 +33,7 @@ impl Tableau {
         self.cards[position.0 as usize].last().copied()
     }
 
-    pub fn find_card(&self, position: (i8, i8), rank: u8, suit: Option<u8>) -> Option<usize> {
+    fn find_card(&self, position: (i8, i8), rank: u8, suit: Option<u8>) -> Option<usize> {
         let visible = self.cutoffs[position.0 as usize] as usize;
         self.cards[position.0 as usize]
             .iter()
@@ -49,7 +49,7 @@ impl Tableau {
             .map(|index| index + visible)
     }
 
-    pub fn take_cards_at_index(&mut self, position: (i8, i8), index: usize) -> Vec<Card> {
+    fn take_cards_at_index(&mut self, position: (i8, i8), index: usize) -> Vec<Card> {
         let column = position.0 as usize;
         if column >= self.cards.len() || index > self.cards[column].len() {
             return vec![];
@@ -138,5 +138,85 @@ impl Tableau {
         let needed_suit = (to_card.suit + 1) % 2;
 
         self.move_cards(needed_rank, Some(needed_suit), from, to);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mock_tableu() -> Tableau {
+        let mut stock = Stock::new();
+        let mut tableau = Tableau::new();
+
+        tableau.initialize(&mut stock);
+
+        tableau
+    }
+
+    #[test]
+    fn test_get_top_card() {
+        let mut tableau = mock_tableu();
+        assert!(tableau.get_top_card((1, 0)).is_some());
+    }
+
+    #[test]
+    fn test_add_card() {
+        let mut tableau = mock_tableu();
+
+        let mut current_card = match tableau.get_top_card((1, 2)) {
+            Some(card) => card,
+            _ => panic!("Top card not found"),
+        };
+
+        while current_card.rank < 5 {
+            tableau = mock_tableu();
+            current_card = match tableau.get_top_card((1, 2)) {
+                Some(card) => card,
+                _ => panic!("Top card not found"),
+            };
+        }
+
+        let first_card = Card::new((current_card.suit % 2) + 1, current_card.rank - 1);
+        assert!(tableau.add_card((1, 2), first_card));
+        assert_eq!(tableau.cards[1].len(), 3);
+
+        let wrong_number_card = Card::new((first_card.suit % 2) + 1, 12);
+        assert!(!tableau.add_card((1, 2), wrong_number_card));
+        assert_eq!(tableau.cards[1].len(), 3);
+
+        let wrong_suit_card = Card::new(first_card.suit % 2, first_card.rank - 1);
+        assert!(!tableau.add_card((1, 2), wrong_suit_card));
+        assert_eq!(tableau.cards[1].len(), 3);
+
+        tableau.take_cards_at_index((0, 1), 0);
+        assert_eq!(tableau.cards[0].len(), 0);
+
+        assert!(!tableau.add_card((0, 0), first_card));
+        assert_eq!(tableau.cards[0].len(), 0);
+
+        let king_card = Card::new(1, 13);
+        assert!(tableau.add_card((0, 0), king_card));
+        assert_eq!(tableau.cards[0].len(), 1);
+    }
+
+    #[test]
+    fn test_try_to_move_between_tableu() {
+        let mut tableau = Tableau::new();
+
+        tableau.cards = vec![
+            vec![Card::new(1, 5)],
+            vec![Card::new(1, 6), Card::new(2, 4)],
+            vec![Card::new(1, 7)],
+            vec![],
+            vec![Card::new(2, 13)],
+            vec![],
+            vec![],
+        ];
+
+        tableau.try_to_move_between_tableu((1, 0), (0, 0));
+        assert_eq!(tableau.cards[0].len(), 2);
+        assert_eq!(tableau.cards[0][1].rank, 4);
+        assert_eq!(tableau.cards[1].len(), 1);
     }
 }
