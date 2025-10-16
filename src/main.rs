@@ -1,16 +1,13 @@
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout},
-    style::{Color, Style},
-    text::Span,
-    widgets::{Block, Widget, canvas::Canvas},
     *,
 };
 use std::cmp;
 use std::time::{Duration, Instant};
 
+mod renderer;
 mod utils;
-use utils::{canvas_style, card_text_style, get_card};
 
 mod card;
 use card::Card;
@@ -26,6 +23,8 @@ use waste::Waste;
 
 mod foundation;
 use foundation::Foundation;
+
+use crate::renderer::render;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let terminal = ratatui::init();
@@ -219,134 +218,17 @@ impl App {
         let vertical_constraints: [Constraint; 2] = [Constraint::Percentage(50); 2];
         let vertical = Layout::vertical(vertical_constraints);
 
-        let [top, bottom] = vertical.areas(frame.area());
-        let [stock, waste, second_empty, spades, hearts, clubs, diamonds] = horizontal.areas(top);
-
-        let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
-
-        frame.render_widget(self.stock_canvas((0, 0)), stock);
-        frame.render_widget(self.waste_canvas((1, 0)), waste);
-        frame.render_widget(self.empty_canvas(), second_empty);
-        frame.render_widget(self.foundation_canvas((3, 0)), spades);
-        frame.render_widget(self.foundation_canvas((4, 0)), hearts);
-        frame.render_widget(self.foundation_canvas((5, 0)), clubs);
-        frame.render_widget(self.foundation_canvas((6, 0)), diamonds);
-
-        frame.render_widget(self.card_canvas((0, 1)), first);
-        frame.render_widget(self.card_canvas((1, 1)), second);
-        frame.render_widget(self.card_canvas((2, 1)), third);
-        frame.render_widget(self.card_canvas((3, 1)), fourth);
-        frame.render_widget(self.card_canvas((4, 1)), fifth);
-        frame.render_widget(self.card_canvas((5, 1)), sixth);
-        frame.render_widget(self.card_canvas((6, 1)), seventh);
-    }
-
-    fn card_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let visible_cards: Vec<Card> = self.tableau.get_visible_cards(pos.0);
-
-        let card_text = format!("Hidden: {}", self.tableau.cutoffs[pos.0 as usize]);
-
-        Canvas::default()
-            .block(
-                Block::bordered()
-                    .title(card_text)
-                    .border_style(canvas_style(pos, self.selected, self.active)),
-            )
-            .x_bounds([0.0, 100.0])
-            .y_bounds([0.0, 100.0])
-            .paint(move |ctx| {
-                ctx.layer();
-                let amount_of_cards = visible_cards.len() as f64;
-
-                for (i, card) in visible_cards.iter().enumerate() {
-                    let card_name = get_card(card.suit, card.rank);
-
-                    ctx.print(
-                        10.0,
-                        100.0 - (100.0 / (amount_of_cards) * i as f64),
-                        Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
-                    );
-                }
-            })
-    }
-
-    fn stock_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let card_amount = self.stock.cards.len();
-
-        let card_text = format!("In stock: {}", card_amount);
-
-        Canvas::default()
-            .block(
-                Block::bordered()
-                    .title(card_text)
-                    .border_style(canvas_style(pos, self.selected, self.active)),
-            )
-            .x_bounds([0.0, 100.0])
-            .y_bounds([0.0, 100.0])
-            .paint(|_ctx| {})
-    }
-
-    fn waste_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let cards = self.waste.get_last_cards();
-
-        Canvas::default()
-            .block(
-                Block::bordered()
-                    .title("Waste pile")
-                    .border_style(canvas_style(pos, self.selected, self.active)),
-            )
-            .x_bounds([0.0, 100.0])
-            .y_bounds([0.0, 100.0])
-            .paint(move |ctx| {
-                ctx.layer();
-                if cards.is_empty() {
-                    ctx.print(10.0, 50.0, Span::styled("Empty", card_text_style(None)));
-                } else {
-                    let amount_of_cards = cards.len() as f64;
-                    for (i, card) in cards.iter().enumerate() {
-                        let card_name = get_card(card.suit, card.rank);
-                        ctx.print(
-                            10.0,
-                            100.0 - (100.0 / (amount_of_cards) * i as f64),
-                            Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
-                        );
-                    }
-                }
-            })
-    }
-
-    fn empty_canvas(&self) -> impl Widget + '_ {
-        Canvas::default().paint(|_ctx| {})
-    }
-
-    fn foundation_canvas(&self, pos: (i8, i8)) -> impl Widget + '_ {
-        let suit_index = pos.0 - 3;
-
-        let card_name = get_card((suit_index + 1) as u8, self.foundations.get_top_value(pos));
-
-        Canvas::default()
-            .block(
-                Block::bordered()
-                    .title("Foundation")
-                    .border_style(canvas_style(pos, self.selected, self.active)),
-            )
-            .x_bounds([0.0, 100.0])
-            .y_bounds([0.0, 100.0])
-            .paint(move |ctx| {
-                ctx.layer();
-                ctx.print(
-                    10.0,
-                    50.0,
-                    Span::styled(
-                        format!("{}", card_name),
-                        Style::default().fg(if pos.0 % 2 == 0 {
-                            Color::LightRed
-                        } else {
-                            Color::LightGreen
-                        }),
-                    ),
-                )
-            })
+        render(
+            frame,
+            horizontal,
+            vertical,
+            &self.tableau,
+            &self.stock,
+            &self.waste,
+            &self.foundations,
+            self.selected,
+            self.active,
+        );
     }
 
     fn handle_key_press(&mut self, key: event::KeyEvent) {
