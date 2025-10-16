@@ -17,6 +17,9 @@ Do you want to play a game but look like you're working hard?
 
 ![demo](demo.gif)
 
+- Hidden means that there are non visible, unknown cards beneath the visible cards
+- Waste pile always shows the last three cards drawn from stock
+
 # Installation and usage
 
 *Rust and Cargo are required to be installed*
