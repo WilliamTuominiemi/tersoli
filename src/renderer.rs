@@ -91,7 +91,7 @@ pub fn render(
     );
 }
 
-pub fn card_canvas(
+fn card_canvas(
     pos: Location,
     tableau: &Tableau,
     selected: Location,
@@ -129,7 +129,7 @@ pub fn card_canvas(
         })
 }
 
-pub fn stock_canvas(
+fn stock_canvas(
     pos: Location,
     stock: &Stock,
     selected: Location,
@@ -150,7 +150,7 @@ pub fn stock_canvas(
         .paint(|_ctx| {})
 }
 
-pub fn waste_canvas(
+fn waste_canvas(
     pos: Location,
     waste: &Waste,
     selected: Location,
@@ -184,11 +184,11 @@ pub fn waste_canvas(
         })
 }
 
-pub fn empty_canvas() -> impl Widget {
+fn empty_canvas() -> impl Widget {
     Canvas::default().paint(|_ctx| {})
 }
 
-pub fn foundation_canvas(
+fn foundation_canvas(
     pos: Location,
     foundations: &Foundation,
     selected: Location,
@@ -226,7 +226,7 @@ pub fn foundation_canvas(
         })
 }
 
-pub fn get_card(suit: u8, card: u8) -> String {
+fn get_card(suit: u8, card: u8) -> String {
     let suit_str = match suit {
         1 => "♠".to_string(),
         2 => "♥".to_string(),
@@ -248,7 +248,7 @@ pub fn get_card(suit: u8, card: u8) -> String {
     format!("{} {}", card_str, suit_str)
 }
 
-pub fn canvas_style(pos: Location, selected: Location, active: Option<Location>) -> Style {
+fn canvas_style(pos: Location, selected: Location, active: Option<Location>) -> Style {
     let is_selected = pos == selected;
     let is_active = match active {
         Some(active) => pos == active,
@@ -266,7 +266,7 @@ pub fn canvas_style(pos: Location, selected: Location, active: Option<Location>)
     })
 }
 
-pub fn card_text_style(card: Option<Card>) -> Style {
+fn card_text_style(card: Option<Card>) -> Style {
     Style::default().fg(match card {
         Some(c) => {
             if c.suit % 2 == 0 {

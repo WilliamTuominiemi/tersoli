@@ -90,7 +90,7 @@ impl App {
         self.active = None
     }
 
-    fn draw_new(&mut self) {
+    fn deal_from_stock(&mut self) {
         if self.stock.cards.is_empty() && self.waste.cards.is_empty() {
             return;
         }
@@ -236,6 +236,30 @@ impl App {
         );
     }
 
+    fn handle_key_press(&mut self, key: event::KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Char('q') => self.apply_command(Command::Quit),
+            KeyCode::Left | KeyCode::Char('a') => {
+                self.apply_command(Command::MoveLeft);
+            }
+            KeyCode::Right | KeyCode::Char('d') => {
+                self.apply_command(Command::MoveRight);
+            }
+            KeyCode::Up | KeyCode::Char('w') => {
+                self.apply_command(Command::MoveUp);
+            }
+            KeyCode::Down | KeyCode::Char('s') => {
+                self.apply_command(Command::MoveDown);
+            }
+            KeyCode::Enter => self.apply_command(Command::Select),
+            KeyCode::Char(' ') => self.apply_command(Command::AutoPlace),
+            _ => {}
+        }
+    }
+
     fn apply_command(&mut self, cmd: Command) {
         match cmd {
             Command::AutoPlace => self.try_to_place_in_foundation(),
@@ -247,7 +271,7 @@ impl App {
                     } else {
                         match (self.selected, active) {
                             (Location::Stock, _) => {
-                                self.draw_new();
+                                self.deal_from_stock();
                             }
                             (Location::Tableau(_), Location::Waste) => {
                                 self.take_from_waste();
@@ -269,7 +293,7 @@ impl App {
                 }
                 _ => {
                     self.active = if self.selected == Location::Stock {
-                        self.draw_new();
+                        self.deal_from_stock();
                         Some(Location::Waste)
                     } else {
                         Some(self.selected)
@@ -332,30 +356,6 @@ impl App {
                     }
                 }
             },
-        }
-    }
-
-    fn handle_key_press(&mut self, key: event::KeyEvent) {
-        if key.kind != KeyEventKind::Press {
-            return;
-        }
-        match key.code {
-            KeyCode::Char('q') => self.apply_command(Command::Quit),
-            KeyCode::Left | KeyCode::Char('a') => {
-                self.apply_command(Command::MoveLeft);
-            }
-            KeyCode::Right | KeyCode::Char('d') => {
-                self.apply_command(Command::MoveRight);
-            }
-            KeyCode::Up | KeyCode::Char('w') => {
-                self.apply_command(Command::MoveUp);
-            }
-            KeyCode::Down | KeyCode::Char('s') => {
-                self.apply_command(Command::MoveDown);
-            }
-            KeyCode::Enter => self.apply_command(Command::Select),
-            KeyCode::Char(' ') => self.apply_command(Command::AutoPlace),
-            _ => {}
         }
     }
 }
