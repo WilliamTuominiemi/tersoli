@@ -65,25 +65,33 @@ mod tests {
         assert_eq!(get_card(1, 13), "King ♠");
     }
 
-    // #[test]
-    // fn test_canvas_style() {
-    //     assert_eq!(
-    //         canvas_style((0, 0), (0, 0), Some((0, 0))),
-    //         Style::default().fg(Color::Green)
-    //     );
-    //     assert_eq!(
-    //         canvas_style((0, 0), (0, 0), None),
-    //         Style::default().fg(Color::Blue)
-    //     );
-    //     assert_eq!(
-    //         canvas_style((1, 1), (0, 0), Some((1, 1))),
-    //         Style::default().fg(Color::Red)
-    //     );
-    //     assert_eq!(
-    //         canvas_style((0, 0), (2, 0), Some((1, 1))),
-    //         Style::default().fg(Color::White)
-    //     );
-    // }
+    #[test]
+    fn test_canvas_style() {
+        assert_eq!(
+            canvas_style(Location::Stock, Location::Stock, Some(Location::Stock)),
+            Style::default().fg(Color::Green)
+        );
+        assert_eq!(
+            canvas_style(Location::Stock, Location::Stock, None),
+            Style::default().fg(Color::Blue)
+        );
+        assert_eq!(
+            canvas_style(
+                Location::Tableau(1),
+                Location::Stock,
+                Some(Location::Tableau(1))
+            ),
+            Style::default().fg(Color::Red)
+        );
+        assert_eq!(
+            canvas_style(
+                Location::Stock,
+                Location::Foundation(0),
+                Some(Location::Tableau(1))
+            ),
+            Style::default().fg(Color::White)
+        );
+    }
 
     #[test]
     fn test_card_text_style() {

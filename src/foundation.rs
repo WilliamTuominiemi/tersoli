@@ -13,7 +13,7 @@ impl Foundation {
 
     pub fn get_top_card(&self, location: Location) -> Option<Card> {
         if let Location::Foundation(index) = location {
-            match self.cards[index as usize].last().copied() {
+            match self.cards[index].last().copied() {
                 Some(card) => card,
                 _ => None,
             }
@@ -37,7 +37,8 @@ impl Foundation {
     }
 
     pub fn add_card(&mut self, card: Card, to_suit: u8) -> bool {
-        if card.suit - 1 != to_suit {
+        let card_suit = card.suit - 1;
+        if card_suit != to_suit {
             return false;
         }
 
@@ -45,7 +46,7 @@ impl Foundation {
             Some(parent) => parent,
             _ => {
                 if card.rank == 1 {
-                    self.cards[(card.suit - 1) as usize].push(Some(card));
+                    self.cards[card_suit as usize].push(Some(card));
                     return true;
                 }
                 return false;
@@ -56,7 +57,7 @@ impl Foundation {
             return false;
         }
 
-        self.cards[(card.suit - 1) as usize].push(Some(card));
+        self.cards[card_suit as usize].push(Some(card));
         return true;
     }
 
@@ -67,126 +68,101 @@ impl Foundation {
             unreachable!("Can only have foundation location enum in foundation")
         }
     }
-
-    pub fn snap_add(&mut self, card: Card) -> bool {
-        let idx = (card.suit - 1) as usize;
-        let foundation_card_rank = match self.cards[idx].last().copied() {
-            Some(foundation_card) => match foundation_card {
-                Some(foundation_card) => foundation_card.rank,
-                _ => 0,
-            },
-            _ => 0,
-        };
-
-        if foundation_card_rank != card.rank - 1 {
-            return false;
-        } else {
-            self.add_card(card, card.suit);
-            return true;
-        }
-    }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     fn mock_foundation() -> Foundation {
-//         let mut mock = Foundation::new();
+    fn mock_foundation() -> Foundation {
+        let mut mock = Foundation::new();
 
-//         mock.add_card(Card::new(2, 1), 2);
-//         mock.add_card(Card::new(2, 2), 2);
-//         mock.add_card(Card::new(3, 1), 3);
+        mock.add_card(Card::new(2, 1), 1);
+        mock.add_card(Card::new(2, 2), 1);
+        mock.add_card(Card::new(3, 1), 2);
 
-//         mock
-//     }
+        mock
+    }
 
-//     #[test]
-//     fn test_get_top_card() {
-//         let foundation = mock_foundation();
+    #[test]
+    fn test_get_top_card() {
+        let foundation = mock_foundation();
 
-//         let top_card = match foundation.get_top_card((4, 0)) {
-//             Some(card) => card,
-//             _ => panic!("No card found at position"),
-//         };
+        println!("{:?}", foundation.cards);
 
-//         assert_eq!(top_card.rank, 2);
-//         assert_eq!(top_card.suit, 2);
-//     }
+        let top_card = match foundation.get_top_card(Location::Foundation(1)) {
+            Some(card) => card,
+            _ => panic!("No card found at position"),
+        };
 
-//     #[test]
-//     fn test_get_top_card_by_suit() {
-//         let foundation = mock_foundation();
+        assert_eq!(top_card.rank, 2);
+        assert_eq!(top_card.suit, 2);
+    }
 
-//         let top_card = match foundation.get_top_card_by_suit(3) {
-//             Some(card) => card,
-//             None => panic!("No card found for suit 3"),
-//         };
+    #[test]
+    fn test_get_top_card_by_suit() {
+        let foundation = mock_foundation();
 
-//         assert_eq!(top_card.rank, 1);
-//         assert_eq!(top_card.suit, 3);
-//     }
+        let top_card = match foundation.get_top_card_by_suit(3) {
+            Some(card) => card,
+            None => panic!("No card found for suit 3"),
+        };
 
-//     #[test]
-//     fn test_get_top_value() {
-//         let foundation = mock_foundation();
+        assert_eq!(top_card.rank, 1);
+        assert_eq!(top_card.suit, 3);
+    }
 
-//         assert_eq!(foundation.get_top_value((4, 0)), 2);
-//     }
+    #[test]
+    fn test_get_top_value() {
+        let foundation = mock_foundation();
 
-//     #[test]
-//     fn test_add_card() {
-//         let mut foundation = mock_foundation();
+        assert_eq!(foundation.get_top_value(Location::Foundation(1)), 2);
+    }
 
-//         // Cards which shouldn't be accepted & added
-//         let wrong_rank_card = Card::new(2, 8);
-//         foundation.add_card(wrong_rank_card, wrong_rank_card.suit);
-//         match foundation.get_top_card_by_suit(wrong_rank_card.suit) {
-//             Some(card) => assert_ne!(card.rank, wrong_rank_card.rank),
-//             _ => panic!("No card found for suit"),
-//         }
+    #[test]
+    fn test_add_card() {
+        let mut foundation = mock_foundation();
 
-//         let wrong_suit_card = Card::new(1, 2);
-//         foundation.add_card(wrong_suit_card, 3);
-//         match foundation.get_top_card_by_suit(3) {
-//             Some(card) => assert_ne!(card.rank, wrong_suit_card.rank),
-//             _ => panic!("No card found for suit"),
-//         }
+        // Cards which shouldn't be accepted & added
+        let wrong_rank_card = Card::new(2, 8);
+        foundation.add_card(wrong_rank_card, wrong_rank_card.suit);
+        match foundation.get_top_card_by_suit(wrong_rank_card.suit) {
+            Some(card) => assert_ne!(card.rank, wrong_rank_card.rank),
+            _ => panic!("No card found for suit"),
+        }
 
-//         // Card which is added to parent card
-//         let add_to_parent_card = Card::new(2, 2);
-//         foundation.add_card(add_to_parent_card, add_to_parent_card.suit);
-//         match foundation.get_top_card_by_suit(add_to_parent_card.suit) {
-//             Some(card) => assert_eq!(card.rank, add_to_parent_card.rank),
-//             _ => panic!("No card found for suit"),
-//         }
+        let wrong_suit_card = Card::new(1, 2);
+        foundation.add_card(wrong_suit_card, 3);
+        match foundation.get_top_card_by_suit(3) {
+            Some(card) => assert_ne!(card.rank, wrong_suit_card.rank),
+            _ => panic!("No card found for suit"),
+        }
 
-//         // Ace added as a first card
-//         let first_card = Card::new(1, 1);
-//         foundation.add_card(first_card, first_card.suit);
-//         match foundation.get_top_card_by_suit(first_card.suit) {
-//             Some(card) => assert_eq!(card.rank, first_card.rank),
-//             _ => panic!("No card found for suit"),
-//         }
-//     }
+        // Card which is added to parent card
+        let add_to_parent_card = Card::new(2, 2);
+        foundation.add_card(add_to_parent_card, add_to_parent_card.suit);
+        match foundation.get_top_card_by_suit(add_to_parent_card.suit) {
+            Some(card) => assert_eq!(card.rank, add_to_parent_card.rank),
+            _ => panic!("No card found for suit"),
+        }
 
-//     #[test]
-//     fn test_remove() {
-//         let mut foundation = mock_foundation();
+        // Ace added as a first card
+        let first_card = Card::new(1, 1);
+        foundation.add_card(first_card, first_card.suit - 1);
+        match foundation.get_top_card_by_suit(first_card.suit) {
+            Some(card) => assert_eq!(card.rank, first_card.rank),
+            _ => panic!("No card found for suit"),
+        }
+    }
 
-//         let before = foundation.cards[0].len();
+    #[test]
+    fn test_remove() {
+        let mut foundation = mock_foundation();
 
-//         foundation.remove_card((3, 0));
+        let before = foundation.cards[0].len();
 
-//         assert_eq!(before - 1, foundation.cards[0].len());
-//     }
+        foundation.remove_card(Location::Foundation(0));
 
-//     #[test]
-//     fn test_snap_add() {
-//         let mut foundation = mock_foundation();
-
-//         assert!(!foundation.snap_add(Card::new(2, 9)));
-//         assert!(foundation.snap_add(Card::new(1, 1)));
-//         assert!(foundation.snap_add(Card::new(1, 2)));
-//     }
-// }
+        assert_eq!(before - 1, foundation.cards[0].len());
+    }
+}

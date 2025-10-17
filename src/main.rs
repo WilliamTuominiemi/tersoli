@@ -194,7 +194,10 @@ impl App {
             _ => return,
         };
 
-        if self.foundations.snap_add(card_to_place) {
+        if self
+            .foundations
+            .add_card(card_to_place, card_to_place.suit - 1)
+        {
             match self.selected {
                 Location::Tableau(index) => {
                     self.tableau.update_cutoffs(index);
