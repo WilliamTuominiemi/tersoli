@@ -3,11 +3,15 @@ use ratatui::{
     layout::{Constraint, Layout},
     *,
 };
-use std::cmp;
 use std::time::{Duration, Instant};
 
 mod renderer;
 mod utils;
+
+mod location;
+use location::Location;
+mod command;
+use command::Command;
 
 mod card;
 use card::Card;
@@ -36,8 +40,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct App {
     exit: bool,
     tick_count: u64,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    selected: Location,
+    active: Option<Location>,
     stock: Stock,
     waste: Waste,
     tableau: Tableau,
@@ -49,7 +53,7 @@ impl App {
         Self {
             exit: false,
             tick_count: 0,
-            selected: (0, 0),
+            selected: Location::Stock,
             active: None,
             stock: Stock::new(),
             waste: Waste::new(),
@@ -114,34 +118,31 @@ impl App {
     }
 
     fn place_in_foundation(&mut self) {
-        let active_position: (i8, i8);
         let card: Card = match self.active {
-            Some(active) => {
-                active_position = active;
-                if active.1 == 1 {
-                    match self.tableau.get_top_card(active) {
-                        Some(tableau_card) => tableau_card,
-                        _ => return,
-                    }
-                } else if active.1 == 0 && active.0 == 1 {
-                    if let Some(card) = self.waste.get_top_card() {
-                        card
-                    } else {
-                        return;
-                    }
-                } else {
-                    return;
-                }
-            }
+            Some(active) => match active {
+                Location::Tableau(_) => match self.tableau.get_top_card(active) {
+                    Some(tableau_card) => tableau_card,
+                    _ => return,
+                },
+                Location::Waste => match self.waste.get_top_card() {
+                    Some(waste_card) => waste_card,
+                    _ => return,
+                },
+                _ => return,
+            },
             _ => return,
         };
 
-        if self.foundations.add_card(card, (self.selected.0 - 2) as u8) {
-            if active_position.1 == 0 && active_position.0 == 1 {
-                self.waste.remove();
-            } else {
-                self.tableau.update_cutoffs(active_position);
-                self.tableau.cards[active_position.0 as usize].pop();
+        if let Location::Foundation(index) = self.selected {
+            if self.foundations.add_card(card, index as u8) {
+                match self.active {
+                    Some(Location::Waste) => self.waste.remove(),
+                    Some(Location::Tableau(index)) => {
+                        self.tableau.update_cutoffs(index);
+                        self.tableau.cards[index].pop();
+                    }
+                    _ => return,
+                }
             }
         }
 
@@ -149,10 +150,10 @@ impl App {
     }
 
     fn take_from_foundation(&mut self) {
-        let active_position: (i8, i8);
+        let active_location: Location;
         let foundation_card = match self.active {
             Some(position) => {
-                active_position = position;
+                active_location = position;
                 match self.foundations.get_top_card(position) {
                     Some(card) => card,
                     _ => return,
@@ -162,45 +163,47 @@ impl App {
         };
 
         if self.tableau.add_card(self.selected, foundation_card) {
-            self.foundations.remove_card(active_position);
+            self.foundations.remove_card(active_location);
         }
 
         self.reset_selection();
     }
 
     fn move_between_tableau(&mut self) {
-        let active_position = match self.active {
+        let active_location = match self.active {
             Some(active) => active,
             _ => return,
         };
 
         self.tableau
-            .try_to_move_between_tableu(active_position, self.selected);
+            .try_to_move_between_tableau(active_location, self.selected);
 
         self.reset_selection();
     }
 
     fn try_to_place_in_foundation(&mut self) {
-        let card_to_place = if self.selected.1 == 1 {
-            match self.tableau.get_top_card(self.selected) {
+        let card_to_place = match self.selected {
+            Location::Tableau(_) => match self.tableau.get_top_card(self.selected) {
                 Some(tableau_card) => tableau_card,
                 _ => return,
-            }
-        } else if self.selected.1 == 0 && self.selected.0 == 1 {
-            match self.waste.get_top_card() {
+            },
+            Location::Waste => match self.waste.get_top_card() {
                 Some(card) => card,
                 _ => return,
-            }
-        } else {
-            return;
+            },
+            _ => return,
         };
 
         if self.foundations.snap_add(card_to_place) {
-            if self.selected.1 == 1 {
-                self.tableau.update_cutoffs(self.selected);
-                self.tableau.cards[self.selected.0 as usize].pop();
-            } else {
-                self.waste.cards.pop();
+            match self.selected {
+                Location::Tableau(index) => {
+                    self.tableau.update_cutoffs(index);
+                    self.tableau.cards[index].pop();
+                }
+                Location::Waste => {
+                    self.waste.cards.pop();
+                }
+                _ => unreachable!("Can't add other than waste or tableau card"),
             }
         }
 
@@ -231,63 +234,125 @@ impl App {
         );
     }
 
-    fn handle_key_press(&mut self, key: event::KeyEvent) {
-        if key.kind != KeyEventKind::Press {
-            return;
-        }
-        match key.code {
-            KeyCode::Char('q') => self.exit = true,
-            KeyCode::Left | KeyCode::Char('a') => {
-                self.selected.0 = cmp::min(cmp::max(0, self.selected.0 - 1), 6);
-                if self.selected == (2, 0) {
-                    self.selected = (1, 0);
-                }
-            }
-            KeyCode::Right | KeyCode::Char('d') => {
-                self.selected.0 = cmp::min(cmp::max(0, self.selected.0 + 1), 6);
-                if self.selected == (2, 0) {
-                    self.selected = (3, 0);
-                }
-            }
-            KeyCode::Up | KeyCode::Char('w') => {
-                self.selected.1 = cmp::min(cmp::max(0, self.selected.1 - 1), 1);
-                if self.selected == (2, 0) {
-                    self.selected = (3, 0);
-                }
-            }
-            KeyCode::Down | KeyCode::Char('s') => {
-                self.selected.1 = cmp::min(cmp::max(0, self.selected.1 + 1), 1)
-            }
-            KeyCode::Enter => match self.active {
-                Some(active_card) => {
-                    if active_card == self.selected {
+    fn apply_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::AutoPlace => self.try_to_place_in_foundation(),
+            Command::Quit => self.exit = true,
+            Command::Select => match self.active {
+                Some(active) => {
+                    if active == self.selected {
                         self.reset_selection();
                     } else {
-                        if self.selected == (0, 0) {
-                            self.draw_new();
-                        } else if active_card.1 == 0 && active_card.0 == 1 && self.selected.1 == 1 {
-                            self.take_from_waste();
-                        } else if active_card.1 == 0 && active_card.0 > 2 && self.selected.1 == 1 {
-                            self.take_from_foundation();
-                        } else if self.selected.1 == 0 && self.selected.0 > 2 {
-                            self.place_in_foundation();
-                        } else if self.selected.1 == 1 && active_card.1 == 1 {
-                            self.move_between_tableau();
-                        } else {
-                            self.active = Some(self.selected);
+                        match (self.selected, active) {
+                            (Location::Stock, _) => {
+                                self.draw_new();
+                            }
+                            (Location::Tableau(_), Location::Waste) => {
+                                self.take_from_waste();
+                            }
+                            (Location::Tableau(_), Location::Foundation(_)) => {
+                                self.take_from_foundation();
+                            }
+                            (Location::Foundation(_), _) => {
+                                self.place_in_foundation();
+                            }
+                            (Location::Tableau(_), Location::Tableau(_)) => {
+                                self.move_between_tableau();
+                            }
+                            _ => {
+                                self.active = Some(self.selected);
+                            }
                         }
                     }
                 }
                 _ => {
-                    self.active = if self.selected == (0, 0) {
+                    self.active = if self.selected == Location::Stock {
                         self.draw_new();
-                        Some((1, 0))
+                        Some(Location::Waste)
                     } else {
                         Some(self.selected)
                     }
                 }
             },
-            KeyCode::Char(' ') => self.try_to_place_in_foundation(),
+            Command::MoveDown => match self.selected {
+                Location::Stock => self.selected = Location::Tableau(0),
+                Location::Waste => self.selected = Location::Tableau(1),
+                Location::Foundation(index) => self.selected = Location::Tableau(3 + index),
+                Location::Tableau(_) => return,
+            },
+            Command::MoveLeft => match self.selected {
+                Location::Stock => return,
+                Location::Waste => self.selected = Location::Stock,
+                Location::Foundation(index) => {
+                    if index == 0 {
+                        self.selected = Location::Waste
+                    } else {
+                        self.selected = Location::Foundation(index - 1)
+                    }
+                }
+                Location::Tableau(index) => {
+                    if index == 0 {
+                        return;
+                    } else {
+                        self.selected = Location::Tableau(index - 1)
+                    }
+                }
+            },
+            Command::MoveRight => match self.selected {
+                Location::Stock => self.selected = Location::Waste,
+                Location::Waste => self.selected = Location::Foundation(0),
+                Location::Foundation(index) => {
+                    if index == 3 {
+                        return;
+                    } else {
+                        self.selected = Location::Foundation(index + 1)
+                    }
+                }
+                Location::Tableau(index) => {
+                    if index == 6 {
+                        return;
+                    } else {
+                        self.selected = Location::Tableau(index + 1)
+                    }
+                }
+            },
+            Command::MoveUp => match self.selected {
+                Location::Stock => return,
+                Location::Waste => return,
+                Location::Foundation(_) => return,
+                Location::Tableau(index) => {
+                    if index == 0 {
+                        self.selected = Location::Stock
+                    } else if index == 1 || index == 2 {
+                        self.selected = Location::Waste
+                    } else {
+                        self.selected = Location::Foundation(index - 3)
+                    }
+                }
+            },
+        }
+    }
+
+    fn handle_key_press(&mut self, key: event::KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Char('q') => self.apply_command(Command::Quit),
+            KeyCode::Left | KeyCode::Char('a') => {
+                self.apply_command(Command::MoveLeft);
+            }
+            KeyCode::Right | KeyCode::Char('d') => {
+                self.apply_command(Command::MoveRight);
+            }
+            KeyCode::Up | KeyCode::Char('w') => {
+                self.apply_command(Command::MoveUp);
+            }
+            KeyCode::Down | KeyCode::Char('s') => {
+                self.apply_command(Command::MoveDown);
+            }
+            KeyCode::Enter => self.apply_command(Command::Select),
+            KeyCode::Char(' ') => self.apply_command(Command::AutoPlace),
             _ => {}
         }
     }

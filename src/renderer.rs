@@ -8,13 +8,12 @@ use ratatui::{
 
 use crate::{
     foundation::Foundation,
+    location::Location,
     stock::Stock,
     tableau::Tableau,
     utils::{canvas_style, card_text_style, get_card},
     waste::Waste,
 };
-
-use crate::card::Card;
 
 pub fn render(
     frame: &mut Frame,
@@ -23,9 +22,9 @@ pub fn render(
     tableau: &Tableau,
     stock: &Stock,
     waste: &Waste,
-    foundation: &Foundation,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    foundations: &Foundation,
+    selected: Location,
+    active: Option<Location>,
 ) {
     let [top, bottom] = vertical.areas(frame.area());
     let [
@@ -40,44 +39,75 @@ pub fn render(
 
     let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
-    frame.render_widget(stock_canvas((0, 0), &stock, selected, active), stock_rect);
-    frame.render_widget(waste_canvas((1, 0), &waste, selected, active), waste_rect);
+    frame.render_widget(
+        stock_canvas(Location::Stock, &stock, selected, active),
+        stock_rect,
+    );
+    frame.render_widget(
+        waste_canvas(Location::Waste, &waste, selected, active),
+        waste_rect,
+    );
     frame.render_widget(empty_canvas(), second_empty);
     frame.render_widget(
-        foundation_canvas((3, 0), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(0), &foundations, selected, active),
         spades,
     );
     frame.render_widget(
-        foundation_canvas((4, 0), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(1), &foundations, selected, active),
         hearts,
     );
     frame.render_widget(
-        foundation_canvas((5, 0), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(2), &foundations, selected, active),
         clubs,
     );
     frame.render_widget(
-        foundation_canvas((6, 0), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(3), &foundations, selected, active),
         diamonds,
     );
 
-    frame.render_widget(card_canvas((0, 1), &tableau, selected, active), first);
-    frame.render_widget(card_canvas((1, 1), &tableau, selected, active), second);
-    frame.render_widget(card_canvas((2, 1), &tableau, selected, active), third);
-    frame.render_widget(card_canvas((3, 1), &tableau, selected, active), fourth);
-    frame.render_widget(card_canvas((4, 1), &tableau, selected, active), fifth);
-    frame.render_widget(card_canvas((5, 1), &tableau, selected, active), sixth);
-    frame.render_widget(card_canvas((6, 1), &tableau, selected, active), seventh);
+    frame.render_widget(
+        card_canvas(Location::Tableau(0), &tableau, selected, active),
+        first,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(1), &tableau, selected, active),
+        second,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(2), &tableau, selected, active),
+        third,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(3), &tableau, selected, active),
+        fourth,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(4), &tableau, selected, active),
+        fifth,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(5), &tableau, selected, active),
+        sixth,
+    );
+    frame.render_widget(
+        card_canvas(Location::Tableau(6), &tableau, selected, active),
+        seventh,
+    );
 }
 
 pub fn card_canvas(
-    pos: (i8, i8),
+    pos: Location,
     tableau: &Tableau,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    selected: Location,
+    active: Option<Location>,
 ) -> impl Widget {
-    let visible_cards: Vec<Card> = tableau.get_visible_cards(pos.0);
-
-    let card_text = format!("Hidden: {}", tableau.cutoffs[pos.0 as usize]);
+    let (visible_cards, card_text) = match pos {
+        Location::Tableau(index) => (
+            tableau.get_visible_cards(index),
+            format!("Hidden: {}", tableau.cutoffs[index]),
+        ),
+        _ => unreachable!("Can't draw tableau other than in tableau"),
+    };
 
     Canvas::default()
         .block(
@@ -104,10 +134,10 @@ pub fn card_canvas(
 }
 
 pub fn stock_canvas(
-    pos: (i8, i8),
+    pos: Location,
     stock: &Stock,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    selected: Location,
+    active: Option<Location>,
 ) -> impl Widget {
     let card_amount = stock.cards.len();
 
@@ -125,10 +155,10 @@ pub fn stock_canvas(
 }
 
 pub fn waste_canvas(
-    pos: (i8, i8),
+    pos: Location,
     waste: &Waste,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    selected: Location,
+    active: Option<Location>,
 ) -> impl Widget {
     let cards = waste.get_last_cards();
 
@@ -163,14 +193,17 @@ pub fn empty_canvas() -> impl Widget {
 }
 
 pub fn foundation_canvas(
-    pos: (i8, i8),
-    foundation: &Foundation,
-    selected: (i8, i8),
-    active: Option<(i8, i8)>,
+    pos: Location,
+    foundations: &Foundation,
+    selected: Location,
+    active: Option<Location>,
 ) -> impl Widget {
-    let suit_index = pos.0 - 3;
+    let suit_index = match pos {
+        Location::Foundation(index) => index,
+        _ => unreachable!("Can't draw foundation other than in foundation"),
+    };
 
-    let card_name = get_card((suit_index + 1) as u8, foundation.get_top_value(pos));
+    let card_name = get_card((suit_index + 1) as u8, foundations.get_top_value(pos));
 
     Canvas::default()
         .block(
@@ -187,7 +220,7 @@ pub fn foundation_canvas(
                 50.0,
                 Span::styled(
                     format!("{}", card_name),
-                    Style::default().fg(if pos.0 % 2 == 0 {
+                    Style::default().fg(if (suit_index + 1) % 2 == 0 {
                         Color::LightRed
                     } else {
                         Color::LightGreen
