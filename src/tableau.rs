@@ -1,4 +1,5 @@
 use crate::card::Card;
+use crate::location::Location;
 use crate::stock::Stock;
 
 pub struct Tableau {
@@ -25,73 +26,88 @@ impl Tableau {
         }
     }
 
-    pub fn get_top_card(&mut self, position: (i8, i8)) -> Option<Card> {
-        if self.cards[position.0 as usize].is_empty() {
-            return None;
-        }
+    pub fn get_top_card(&mut self, location: Location) -> Option<Card> {
+        if let Location::Tableau(index) = location {
+            if self.cards[index].is_empty() {
+                return None;
+            }
 
-        self.cards[position.0 as usize].last().copied()
+            self.cards[index].last().copied()
+        } else {
+            unreachable!("Expected Location::tableau, got something else :(");
+        }
     }
 
-    fn find_card(&self, position: (i8, i8), rank: u8, suit: Option<u8>) -> Option<usize> {
-        let visible = self.cutoffs[position.0 as usize] as usize;
-        self.cards[position.0 as usize]
-            .iter()
-            .enumerate()
-            .skip(visible)
-            .position(|(_, &card)| {
-                card.rank == rank
-                    && match suit {
-                        Some(s) => card.suit % 2 == s,
-                        None => true,
-                    }
-            })
-            .map(|index| index + visible)
+    fn find_card(&self, location: Location, rank: u8, suit: Option<u8>) -> Option<usize> {
+        match location {
+            Location::Tableau(index) => {
+                let visible = self.cutoffs[index] as usize;
+                self.cards[index]
+                    .iter()
+                    .enumerate()
+                    .skip(visible)
+                    .position(|(_, &card)| {
+                        card.rank == rank
+                            && match suit {
+                                Some(s) => card.suit % 2 == s,
+                                None => true,
+                            }
+                    })
+                    .map(|index| index + visible)
+            }
+            _ => unreachable!("can only find tableau cards"),
+        }
     }
 
-    fn take_cards_at_index(&mut self, position: (i8, i8), index: usize) -> Vec<Card> {
-        let column = position.0 as usize;
-        if column >= self.cards.len() || index > self.cards[column].len() {
-            return vec![];
-        }
-
-        if self.cutoffs[column] > 0 && (index as u8) <= self.cutoffs[column] {
-            self.cutoffs[column] -= 1;
-        }
-
-        self.cards[position.0 as usize].split_off(index)
-    }
-
-    pub fn add_card(&mut self, to: (i8, i8), card: Card) -> bool {
-        let parent_card = match self.get_top_card(to) {
-            Some(parent) => parent,
-            _ => {
-                if card.rank == 13 {
-                    self.cards[to.0 as usize].push(card);
-                    return true;
+    fn take_cards_at_index(&mut self, location: Location, index: usize) -> Vec<Card> {
+        match location {
+            Location::Tableau(column) => {
+                if column >= self.cards.len() || index > self.cards[column].len() {
+                    return vec![];
                 }
+
+                if self.cutoffs[column] > 0 && (index as u8) <= self.cutoffs[column] {
+                    self.cutoffs[column] -= 1;
+                }
+
+                self.cards[column].split_off(index)
+            }
+            _ => unreachable!("can only take tableau cards"),
+        }
+    }
+
+    pub fn add_card(&mut self, to: Location, card: Card) -> bool {
+        if let Location::Tableau(index) = to {
+            let parent_card = match self.get_top_card(to) {
+                Some(parent) => parent,
+                _ => {
+                    if card.rank == 13 {
+                        self.cards[index].push(card);
+                        return true;
+                    }
+                    return false;
+                }
+            };
+
+            if card.suit % 2 == parent_card.suit % 2 {
                 return false;
             }
-        };
 
-        if card.suit % 2 == parent_card.suit % 2 {
-            return false;
+            if card.rank != parent_card.rank - 1 {
+                return false;
+            }
+
+            self.cards[index].push(card);
+            return true;
         }
-
-        if card.rank != parent_card.rank - 1 {
-            return false;
-        }
-
-        self.cards[to.0 as usize].push(card);
-        return true;
+        return false;
     }
 
-    pub fn get_visible_cards(&self, column: i8) -> Vec<Card> {
-        self.cards[column as usize][(self.cutoffs[column as usize] as usize)..].to_vec()
+    pub fn get_visible_cards(&self, column: usize) -> Vec<Card> {
+        self.cards[column][(self.cutoffs[column] as usize)..].to_vec()
     }
 
-    pub fn update_cutoffs(&mut self, position: (i8, i8)) {
-        let index = position.0 as usize;
+    pub fn update_cutoffs(&mut self, index: usize) {
         if index >= self.cutoffs.len() || index >= self.cards.len() {
             return;
         }
@@ -108,8 +124,8 @@ impl Tableau {
         &mut self,
         needed_rank: u8,
         needed_suit: Option<u8>,
-        from: (i8, i8),
-        to: (i8, i8),
+        from: Location,
+        to: Location,
     ) {
         let card_index = match self.find_card(from, needed_rank, needed_suit) {
             Some(index) => index,
@@ -125,7 +141,7 @@ impl Tableau {
         return;
     }
 
-    pub fn try_to_move_between_tableu(&mut self, from: (i8, i8), to: (i8, i8)) {
+    pub fn try_to_move_between_tableau(&mut self, from: Location, to: Location) {
         let to_card: Card = match self.get_top_card(to) {
             Some(card) => card,
             _ => {
@@ -145,7 +161,7 @@ impl Tableau {
 mod tests {
     use super::*;
 
-    fn mock_tableu() -> Tableau {
+    fn mock_tableau() -> Tableau {
         let mut stock = Stock::new();
         let mut tableau = Tableau::new();
 
@@ -156,52 +172,52 @@ mod tests {
 
     #[test]
     fn test_get_top_card() {
-        let mut tableau = mock_tableu();
-        assert!(tableau.get_top_card((1, 0)).is_some());
+        let mut tableau = mock_tableau();
+        assert!(tableau.get_top_card(Location::Tableau(1)).is_some());
     }
 
     #[test]
     fn test_add_card() {
-        let mut tableau = mock_tableu();
+        let mut tableau = mock_tableau();
 
-        let mut current_card = match tableau.get_top_card((1, 2)) {
+        let mut current_card = match tableau.get_top_card(Location::Tableau(2)) {
             Some(card) => card,
             _ => panic!("Top card not found"),
         };
 
         while current_card.rank < 5 {
-            tableau = mock_tableu();
-            current_card = match tableau.get_top_card((1, 2)) {
+            tableau = mock_tableau();
+            current_card = match tableau.get_top_card(Location::Tableau(2)) {
                 Some(card) => card,
                 _ => panic!("Top card not found"),
             };
         }
 
         let first_card = Card::new((current_card.suit % 2) + 1, current_card.rank - 1);
-        assert!(tableau.add_card((1, 2), first_card));
-        assert_eq!(tableau.cards[1].len(), 3);
+        assert!(tableau.add_card(Location::Tableau(2), first_card));
+        assert_eq!(tableau.cards[2].len(), 4);
 
         let wrong_number_card = Card::new((first_card.suit % 2) + 1, 12);
-        assert!(!tableau.add_card((1, 2), wrong_number_card));
-        assert_eq!(tableau.cards[1].len(), 3);
+        assert!(!tableau.add_card(Location::Tableau(2), wrong_number_card));
+        assert_eq!(tableau.cards[2].len(), 4);
 
         let wrong_suit_card = Card::new(first_card.suit % 2, first_card.rank - 1);
-        assert!(!tableau.add_card((1, 2), wrong_suit_card));
-        assert_eq!(tableau.cards[1].len(), 3);
+        assert!(!tableau.add_card(Location::Tableau(2), wrong_suit_card));
+        assert_eq!(tableau.cards[2].len(), 4);
 
-        tableau.take_cards_at_index((0, 1), 0);
+        tableau.take_cards_at_index(Location::Tableau(0), 0);
         assert_eq!(tableau.cards[0].len(), 0);
 
-        assert!(!tableau.add_card((0, 0), first_card));
+        assert!(!tableau.add_card(Location::Tableau(0), first_card));
         assert_eq!(tableau.cards[0].len(), 0);
 
         let king_card = Card::new(1, 13);
-        assert!(tableau.add_card((0, 0), king_card));
+        assert!(tableau.add_card(Location::Tableau(0), king_card));
         assert_eq!(tableau.cards[0].len(), 1);
     }
 
     #[test]
-    fn test_try_to_move_between_tableu() {
+    fn test_try_to_move_between_tableau() {
         let mut tableau = Tableau::new();
 
         tableau.cards = vec![
@@ -214,7 +230,7 @@ mod tests {
             vec![],
         ];
 
-        tableau.try_to_move_between_tableu((1, 0), (0, 0));
+        tableau.try_to_move_between_tableau(Location::Tableau(1), Location::Tableau(0));
         assert_eq!(tableau.cards[0].len(), 2);
         assert_eq!(tableau.cards[0][1].rank, 4);
         assert_eq!(tableau.cards[1].len(), 1);

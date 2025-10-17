@@ -1,6 +1,6 @@
 use ratatui::style::{Color, Style};
 
-use crate::card::Card;
+use crate::{card::Card, location::Location};
 
 pub fn get_card(suit: u8, card: u8) -> String {
     let suit_str = match suit {
@@ -24,7 +24,7 @@ pub fn get_card(suit: u8, card: u8) -> String {
     format!("{} {}", card_str, suit_str)
 }
 
-pub fn canvas_style(pos: (i8, i8), selected: (i8, i8), active: Option<(i8, i8)>) -> Style {
+pub fn canvas_style(pos: Location, selected: Location, active: Option<Location>) -> Style {
     let is_selected = pos == selected;
     let is_active = match active {
         Some(active) => pos == active,
@@ -68,19 +68,27 @@ mod tests {
     #[test]
     fn test_canvas_style() {
         assert_eq!(
-            canvas_style((0, 0), (0, 0), Some((0, 0))),
+            canvas_style(Location::Stock, Location::Stock, Some(Location::Stock)),
             Style::default().fg(Color::Green)
         );
         assert_eq!(
-            canvas_style((0, 0), (0, 0), None),
+            canvas_style(Location::Stock, Location::Stock, None),
             Style::default().fg(Color::Blue)
         );
         assert_eq!(
-            canvas_style((1, 1), (0, 0), Some((1, 1))),
+            canvas_style(
+                Location::Tableau(1),
+                Location::Stock,
+                Some(Location::Tableau(1))
+            ),
             Style::default().fg(Color::Red)
         );
         assert_eq!(
-            canvas_style((0, 0), (2, 0), Some((1, 1))),
+            canvas_style(
+                Location::Stock,
+                Location::Foundation(0),
+                Some(Location::Tableau(1))
+            ),
             Style::default().fg(Color::White)
         );
     }

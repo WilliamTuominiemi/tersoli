@@ -1,4 +1,4 @@
-use crate::card::Card;
+use crate::{card::Card, location::Location};
 
 pub struct Foundation {
     pub cards: Vec<Vec<Option<Card>>>,
@@ -11,10 +11,14 @@ impl Foundation {
         }
     }
 
-    pub fn get_top_card(&self, position: (i8, i8)) -> Option<Card> {
-        match self.cards[(position.0 - 3) as usize].last().copied() {
-            Some(card) => card,
-            _ => None,
+    pub fn get_top_card(&self, location: Location) -> Option<Card> {
+        if let Location::Foundation(index) = location {
+            match self.cards[index].last().copied() {
+                Some(card) => card,
+                _ => None,
+            }
+        } else {
+            None
         }
     }
 
@@ -25,15 +29,16 @@ impl Foundation {
         }
     }
 
-    pub fn get_top_value(&self, position: (i8, i8)) -> u8 {
-        match self.get_top_card(position) {
+    pub fn get_top_value(&self, location: Location) -> u8 {
+        match self.get_top_card(location) {
             Some(card) => card.rank,
             _ => 0,
         }
     }
 
     pub fn add_card(&mut self, card: Card, to_suit: u8) -> bool {
-        if card.suit != to_suit {
+        let card_suit = card.suit - 1;
+        if card_suit != to_suit {
             return false;
         }
 
@@ -41,7 +46,7 @@ impl Foundation {
             Some(parent) => parent,
             _ => {
                 if card.rank == 1 {
-                    self.cards[(card.suit - 1) as usize].push(Some(card));
+                    self.cards[card_suit as usize].push(Some(card));
                     return true;
                 }
                 return false;
@@ -52,29 +57,15 @@ impl Foundation {
             return false;
         }
 
-        self.cards[(card.suit - 1) as usize].push(Some(card));
+        self.cards[card_suit as usize].push(Some(card));
         return true;
     }
 
-    pub fn remove_card(&mut self, position: (i8, i8)) {
-        self.cards[(position.0 - 3) as usize].pop();
-    }
-
-    pub fn snap_add(&mut self, card: Card) -> bool {
-        let idx = (card.suit - 1) as usize;
-        let foundation_card_rank = match self.cards[idx].last().copied() {
-            Some(foundation_card) => match foundation_card {
-                Some(foundation_card) => foundation_card.rank,
-                _ => 0,
-            },
-            _ => 0,
-        };
-
-        if foundation_card_rank != card.rank - 1 {
-            return false;
+    pub fn remove_card(&mut self, location: Location) {
+        if let Location::Foundation(index) = location {
+            self.cards[index].pop();
         } else {
-            self.add_card(card, card.suit);
-            return true;
+            unreachable!("Can only have foundation location enum in foundation")
         }
     }
 }
@@ -86,9 +77,9 @@ mod tests {
     fn mock_foundation() -> Foundation {
         let mut mock = Foundation::new();
 
-        mock.add_card(Card::new(2, 1), 2);
-        mock.add_card(Card::new(2, 2), 2);
-        mock.add_card(Card::new(3, 1), 3);
+        mock.add_card(Card::new(2, 1), 1);
+        mock.add_card(Card::new(2, 2), 1);
+        mock.add_card(Card::new(3, 1), 2);
 
         mock
     }
@@ -97,7 +88,9 @@ mod tests {
     fn test_get_top_card() {
         let foundation = mock_foundation();
 
-        let top_card = match foundation.get_top_card((4, 0)) {
+        println!("{:?}", foundation.cards);
+
+        let top_card = match foundation.get_top_card(Location::Foundation(1)) {
             Some(card) => card,
             _ => panic!("No card found at position"),
         };
@@ -123,7 +116,7 @@ mod tests {
     fn test_get_top_value() {
         let foundation = mock_foundation();
 
-        assert_eq!(foundation.get_top_value((4, 0)), 2);
+        assert_eq!(foundation.get_top_value(Location::Foundation(1)), 2);
     }
 
     #[test]
@@ -155,7 +148,7 @@ mod tests {
 
         // Ace added as a first card
         let first_card = Card::new(1, 1);
-        foundation.add_card(first_card, first_card.suit);
+        foundation.add_card(first_card, first_card.suit - 1);
         match foundation.get_top_card_by_suit(first_card.suit) {
             Some(card) => assert_eq!(card.rank, first_card.rank),
             _ => panic!("No card found for suit"),
@@ -168,17 +161,8 @@ mod tests {
 
         let before = foundation.cards[0].len();
 
-        foundation.remove_card((3, 0));
+        foundation.remove_card(Location::Foundation(0));
 
         assert_eq!(before - 1, foundation.cards[0].len());
-    }
-
-    #[test]
-    fn test_snap_add() {
-        let mut foundation = mock_foundation();
-
-        assert!(!foundation.snap_add(Card::new(2, 9)));
-        assert!(foundation.snap_add(Card::new(1, 1)));
-        assert!(foundation.snap_add(Card::new(1, 2)));
     }
 }
