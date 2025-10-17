@@ -6,7 +6,6 @@ use ratatui::{
 use std::time::{Duration, Instant};
 
 mod renderer;
-mod utils;
 
 mod location;
 use location::Location;
