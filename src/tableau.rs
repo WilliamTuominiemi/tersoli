@@ -1,6 +1,4 @@
-use crate::card::Card;
-use crate::location::Location;
-use crate::stock::Stock;
+use crate::{card::Card, location::Location, stock::Stock, suit::Suit};
 
 pub struct Tableau {
     pub cards: Vec<Vec<Card>>,
@@ -38,7 +36,7 @@ impl Tableau {
         }
     }
 
-    fn find_card(&self, location: Location, rank: u8, suit: Option<u8>) -> Option<usize> {
+    fn find_card(&self, location: Location, rank: u8, suit: Option<Suit>) -> Option<usize> {
         match location {
             Location::Tableau(index) => {
                 let visible = self.cutoffs[index] as usize;
@@ -49,7 +47,13 @@ impl Tableau {
                     .position(|(_, &card)| {
                         card.rank == rank
                             && match suit {
-                                Some(s) => card.suit % 2 == s,
+                                Some(parent_suit) => {
+                                    let is_parent_red =
+                                        matches!(parent_suit, Suit::Hearts | Suit::Diamonds);
+                                    let is_card_red =
+                                        matches!(card.suit, Suit::Hearts | Suit::Diamonds);
+                                    is_parent_red == is_card_red
+                                }
                                 None => true,
                             }
                     })
@@ -89,7 +93,9 @@ impl Tableau {
                 }
             };
 
-            if card.suit % 2 == parent_card.suit % 2 {
+            let is_parent_red = matches!(parent_card.suit, Suit::Hearts | Suit::Diamonds);
+            let is_card_red = matches!(card.suit, Suit::Hearts | Suit::Diamonds);
+            if is_parent_red == is_card_red {
                 return false;
             }
 
@@ -123,7 +129,7 @@ impl Tableau {
     fn move_cards(
         &mut self,
         needed_rank: u8,
-        needed_suit: Option<u8>,
+        needed_suit: Option<Suit>,
         from: Location,
         to: Location,
     ) {
@@ -151,7 +157,10 @@ impl Tableau {
         };
 
         let needed_rank = to_card.rank - 1;
-        let needed_suit = (to_card.suit + 1) % 2;
+        let needed_suit = match to_card.suit {
+            Suit::Clubs | Suit::Spades => Suit::Hearts,
+            Suit::Hearts | Suit::Diamonds => Suit::Spades,
+        };
 
         self.move_cards(needed_rank, Some(needed_suit), from, to);
     }
@@ -168,6 +177,22 @@ mod tests {
         tableau.initialize(&mut stock);
 
         tableau
+    }
+
+    fn opposite_color_suit(suit: Suit) -> Suit {
+        match suit {
+            Suit::Spades | Suit::Clubs => Suit::Hearts,
+            Suit::Hearts | Suit::Diamonds => Suit::Spades,
+        }
+    }
+
+    fn same_color_suit(suit: Suit) -> Suit {
+        match suit {
+            Suit::Spades => Suit::Clubs,
+            Suit::Clubs => Suit::Spades,
+            Suit::Hearts => Suit::Diamonds,
+            Suit::Diamonds => Suit::Hearts,
+        }
     }
 
     #[test]
@@ -193,15 +218,18 @@ mod tests {
             };
         }
 
-        let first_card = Card::new((current_card.suit % 2) + 1, current_card.rank - 1);
+        let first_card = Card::new(
+            opposite_color_suit(current_card.suit),
+            current_card.rank - 1,
+        );
         assert!(tableau.add_card(Location::Tableau(2), first_card));
         assert_eq!(tableau.cards[2].len(), 4);
 
-        let wrong_number_card = Card::new((first_card.suit % 2) + 1, 12);
+        let wrong_number_card = Card::new(opposite_color_suit(first_card.suit), 12);
         assert!(!tableau.add_card(Location::Tableau(2), wrong_number_card));
         assert_eq!(tableau.cards[2].len(), 4);
 
-        let wrong_suit_card = Card::new(first_card.suit % 2, first_card.rank - 1);
+        let wrong_suit_card = Card::new(same_color_suit(first_card.suit), first_card.rank - 1);
         assert!(!tableau.add_card(Location::Tableau(2), wrong_suit_card));
         assert_eq!(tableau.cards[2].len(), 4);
 
@@ -211,7 +239,7 @@ mod tests {
         assert!(!tableau.add_card(Location::Tableau(0), first_card));
         assert_eq!(tableau.cards[0].len(), 0);
 
-        let king_card = Card::new(1, 13);
+        let king_card = Card::new(Suit::Clubs, 13);
         assert!(tableau.add_card(Location::Tableau(0), king_card));
         assert_eq!(tableau.cards[0].len(), 1);
     }
@@ -221,11 +249,11 @@ mod tests {
         let mut tableau = Tableau::new();
 
         tableau.cards = vec![
-            vec![Card::new(1, 5)],
-            vec![Card::new(1, 6), Card::new(2, 4)],
-            vec![Card::new(1, 7)],
+            vec![Card::new(Suit::Clubs, 5)],
+            vec![Card::new(Suit::Clubs, 6), Card::new(Suit::Hearts, 4)],
+            vec![Card::new(Suit::Clubs, 7)],
             vec![],
-            vec![Card::new(2, 13)],
+            vec![Card::new(Suit::Hearts, 13)],
             vec![],
             vec![],
         ];

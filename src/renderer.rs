@@ -7,8 +7,8 @@ use ratatui::{
 };
 
 use crate::{
-    card::Card, foundation::Foundation, location::Location, stock::Stock, tableau::Tableau,
-    waste::Waste,
+    card::Card, foundation::Foundation, location::Location, stock::Stock, suit::Suit,
+    tableau::Tableau, utils::get_suit_by_card_suit_index, waste::Waste,
 };
 
 pub fn render(
@@ -199,7 +199,10 @@ fn foundation_canvas(
         _ => unreachable!("Can't draw foundation other than in foundation"),
     };
 
-    let card_name = get_card((suit_index + 1) as u8, foundations.get_top_value(pos));
+    let card_name = get_card(
+        get_suit_by_card_suit_index(suit_index),
+        foundations.get_top_value(pos),
+    );
 
     Canvas::default()
         .block(
@@ -226,26 +229,25 @@ fn foundation_canvas(
         })
 }
 
-fn get_card(suit: u8, card: u8) -> String {
+fn get_card(suit: Suit, rank: u8) -> String {
     let suit_str = match suit {
-        1 => "♠".to_string(),
-        2 => "♥".to_string(),
-        3 => "♣".to_string(),
-        4 => "♦".to_string(),
-        _ => "Error".to_string(),
+        Suit::Spades => "♠".to_string(),
+        Suit::Hearts => "♥".to_string(),
+        Suit::Clubs => "♣".to_string(),
+        Suit::Diamonds => "♦".to_string(),
     };
 
-    let card_str = match card {
+    let rank_str = match rank {
         0 => "".to_string(),
         1 => "Ace".to_string(),
-        2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => card.to_string(),
+        2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => rank.to_string(),
         11 => "Jack".to_string(),
         12 => "Queen".to_string(),
         13 => "King".to_string(),
         _ => "Error".to_string(),
     };
 
-    format!("{} {}", card_str, suit_str)
+    format!("{} {}", rank_str, suit_str)
 }
 
 fn canvas_style(pos: Location, selected: Location, active: Option<Location>) -> Style {
@@ -268,13 +270,10 @@ fn canvas_style(pos: Location, selected: Location, active: Option<Location>) -> 
 
 fn card_text_style(card: Option<Card>) -> Style {
     Style::default().fg(match card {
-        Some(c) => {
-            if c.suit % 2 == 0 {
-                Color::LightRed
-            } else {
-                Color::LightGreen
-            }
-        }
+        Some(c) => match c.suit {
+            Suit::Hearts | Suit::Diamonds => Color::LightRed,
+            Suit::Clubs | Suit::Spades => Color::LightGreen,
+        },
         _ => Color::Yellow,
     })
 }
@@ -285,8 +284,8 @@ mod tests {
 
     #[test]
     fn test_get_card() {
-        assert_eq!(get_card(3, 8), "8 ♣");
-        assert_eq!(get_card(1, 13), "King ♠");
+        assert_eq!(get_card(Suit::Hearts, 8), "8 ♥");
+        assert_eq!(get_card(Suit::Spades, 13), "King ♠");
     }
 
     #[test]
@@ -319,8 +318,8 @@ mod tests {
 
     #[test]
     fn test_card_text_style() {
-        let card1 = Card::new(1, 1);
-        let card2 = Card::new(2, 2);
+        let card1 = Card::new(Suit::Clubs, 1);
+        let card2 = Card::new(Suit::Hearts, 2);
 
         assert_eq!(
             card_text_style(Some(card1)),

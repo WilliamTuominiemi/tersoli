@@ -1,11 +1,13 @@
+use crate::suit::Suit;
+
 #[derive(Copy, Clone, Debug)]
 pub struct Card {
-    pub suit: u8,
+    pub suit: Suit,
     pub rank: u8,
 }
 
 impl Card {
-    pub fn new(suit: u8, rank: u8) -> Self {
+    pub fn new(suit: Suit, rank: u8) -> Self {
         Self { suit, rank }
     }
 }

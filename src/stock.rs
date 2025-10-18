@@ -1,6 +1,6 @@
 use rand::prelude::*;
 
-use crate::{card::Card, waste::Waste};
+use crate::{card::Card, utils::get_suit_by_card_suit_index, waste::Waste};
 
 pub struct Stock {
     pub cards: Vec<Card>,
@@ -9,9 +9,12 @@ pub struct Stock {
 impl Stock {
     pub fn new() -> Self {
         let mut new_stock = Vec::with_capacity(52);
-        for i in 1..=4 {
+        for i in 0..=3 {
             for j in 1..=13 {
-                new_stock.push(Card::new(i, j));
+                new_stock.push(Card::new(
+                    get_suit_by_card_suit_index(i), // THESE INDEX THINGS NEED TO BE MOVED TO UTILS
+                    j,
+                ));
             }
         }
 

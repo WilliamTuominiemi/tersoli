@@ -6,11 +6,14 @@ use ratatui::{
 use std::time::{Duration, Instant};
 
 mod renderer;
+mod utils;
+use utils::*;
 
 mod location;
 use location::Location;
 mod command;
 use command::Command;
+mod suit;
 
 mod card;
 use card::Card;
@@ -133,7 +136,10 @@ impl App {
         };
 
         if let Location::Foundation(index) = self.selected {
-            if self.foundations.add_card(card, index as u8) {
+            if self
+                .foundations
+                .add_card(card, get_suit_by_card_suit_index(index))
+            {
                 match self.active {
                     Some(Location::Waste) => self.waste.remove(),
                     Some(Location::Tableau(index)) => {
@@ -193,10 +199,7 @@ impl App {
             _ => return,
         };
 
-        if self
-            .foundations
-            .add_card(card_to_place, card_to_place.suit - 1)
-        {
+        if self.foundations.add_card(card_to_place, card_to_place.suit) {
             match self.selected {
                 Location::Tableau(index) => {
                     self.tableau.update_cutoffs(index);
