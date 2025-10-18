@@ -27,3 +27,8 @@ Do you want to play a game but look like you're working hard?
 Run ``cargo install --path .`` in this project root.
 
 After this type **tersoli** into your terminal to launch the game whenever you want.
+
+# Technical overview
+
+- Used Ratatui terminal user interface library. 
+- Unit tests for the most central logic and mechanics.
