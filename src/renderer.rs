@@ -37,57 +37,57 @@ pub fn render(
     let [first, second, third, fourth, fifth, sixth, seventh] = horizontal.areas(bottom);
 
     frame.render_widget(
-        stock_canvas(Location::Stock, &stock, selected, active),
+        stock_canvas(Location::Stock, stock, selected, active),
         stock_rect,
     );
     frame.render_widget(
-        waste_canvas(Location::Waste, &waste, selected, active),
+        waste_canvas(Location::Waste, waste, selected, active),
         waste_rect,
     );
     frame.render_widget(empty_canvas(won), second_empty);
     frame.render_widget(
-        foundation_canvas(Location::Foundation(0), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(0), foundation, selected, active),
         spades,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(1), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(1), foundation, selected, active),
         hearts,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(2), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(2), foundation, selected, active),
         clubs,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(3), &foundation, selected, active),
+        foundation_canvas(Location::Foundation(3), foundation, selected, active),
         diamonds,
     );
 
     frame.render_widget(
-        card_canvas(Location::Tableau(0), &tableau, selected, active),
+        card_canvas(Location::Tableau(0), tableau, selected, active),
         first,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(1), &tableau, selected, active),
+        card_canvas(Location::Tableau(1), tableau, selected, active),
         second,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(2), &tableau, selected, active),
+        card_canvas(Location::Tableau(2), tableau, selected, active),
         third,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(3), &tableau, selected, active),
+        card_canvas(Location::Tableau(3), tableau, selected, active),
         fourth,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(4), &tableau, selected, active),
+        card_canvas(Location::Tableau(4), tableau, selected, active),
         fifth,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(5), &tableau, selected, active),
+        card_canvas(Location::Tableau(5), tableau, selected, active),
         sixth,
     );
     frame.render_widget(
-        card_canvas(Location::Tableau(6), &tableau, selected, active),
+        card_canvas(Location::Tableau(6), tableau, selected, active),
         seventh,
     );
 }
@@ -124,7 +124,7 @@ fn card_canvas(
                 ctx.print(
                     10.0,
                     100.0 - (100.0 / (amount_of_cards) * i as f64),
-                    Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
+                    Span::styled(card_name.to_string(), card_text_style(Some(*card))),
                 );
             }
         })
@@ -178,7 +178,7 @@ fn waste_canvas(
                     ctx.print(
                         10.0,
                         100.0 - (100.0 / (amount_of_cards) * i as f64),
-                        Span::styled(format!("{}", card_name), card_text_style(Some(*card))),
+                        Span::styled(card_name.to_string(), card_text_style(Some(*card))),
                     );
                 }
             }
@@ -237,7 +237,7 @@ fn foundation_canvas(
                 10.0,
                 50.0,
                 Span::styled(
-                    format!("{}", card_name),
+                    card_name.to_string(),
                     Style::default().fg(if (suit_index + 1) % 2 == 0 {
                         Color::LightRed
                     } else {
@@ -259,7 +259,7 @@ fn get_card(suit: Suit, rank: u8) -> String {
     let rank_str = match rank {
         0 => "".to_string(),
         1 => "Ace".to_string(),
-        2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => rank.to_string(),
+        2..=10 => rank.to_string(),
         11 => "Jack".to_string(),
         12 => "Queen".to_string(),
         13 => "King".to_string(),

@@ -76,11 +76,10 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
 
-            if event::poll(timeout)? {
-                match event::read()? {
-                    Event::Key(key) => self.handle_key_press(key),
-                    _ => (),
-                }
+            if event::poll(timeout)?
+                && let Event::Key(key) = event::read()?
+            {
+                self.handle_key_press(key)
             }
 
             if last_tick.elapsed() >= tick_rate {
@@ -97,7 +96,7 @@ impl App {
     }
 
     fn deal_from_stock(&mut self) {
-        if self.stock.cards.is_empty() && self.waste.cards.is_empty() {
+        if self.stock.cards.is_empty() && !self.waste.cards.is_empty() {
             return;
         }
 
@@ -138,19 +137,18 @@ impl App {
             _ => return,
         };
 
-        if let Location::Foundation(index) = self.selected {
-            if self
+        if let Location::Foundation(index) = self.selected
+            && self
                 .foundation
                 .add_card(card, get_suit_by_card_suit_index(index))
-            {
-                match self.active {
-                    Some(Location::Waste) => self.waste.remove(),
-                    Some(Location::Tableau(index)) => {
-                        self.tableau.update_cutoffs(index);
-                        self.tableau.cards[index].pop();
-                    }
-                    _ => return,
+        {
+            match self.active {
+                Some(Location::Waste) => self.waste.remove(),
+                Some(Location::Tableau(index)) => {
+                    self.tableau.update_cutoffs(index);
+                    self.tableau.cards[index].pop();
                 }
+                _ => return,
             }
         }
 
@@ -244,26 +242,25 @@ impl App {
     }
 
     fn handle_key_press(&mut self, key: event::KeyEvent) {
-        if key.kind != KeyEventKind::Press {
-            return;
-        }
-        match key.code {
-            KeyCode::Char('q') => self.apply_command(Command::Quit),
-            KeyCode::Left | KeyCode::Char('a') => {
-                self.apply_command(Command::MoveLeft);
+        if key.kind == KeyEventKind::Press {
+            match key.code {
+                KeyCode::Char('q') => self.apply_command(Command::Quit),
+                KeyCode::Left | KeyCode::Char('a') => {
+                    self.apply_command(Command::MoveLeft);
+                }
+                KeyCode::Right | KeyCode::Char('d') => {
+                    self.apply_command(Command::MoveRight);
+                }
+                KeyCode::Up | KeyCode::Char('w') => {
+                    self.apply_command(Command::MoveUp);
+                }
+                KeyCode::Down | KeyCode::Char('s') => {
+                    self.apply_command(Command::MoveDown);
+                }
+                KeyCode::Enter => self.apply_command(Command::Select),
+                KeyCode::Char(' ') => self.apply_command(Command::AutoPlace),
+                _ => {}
             }
-            KeyCode::Right | KeyCode::Char('d') => {
-                self.apply_command(Command::MoveRight);
-            }
-            KeyCode::Up | KeyCode::Char('w') => {
-                self.apply_command(Command::MoveUp);
-            }
-            KeyCode::Down | KeyCode::Char('s') => {
-                self.apply_command(Command::MoveDown);
-            }
-            KeyCode::Enter => self.apply_command(Command::Select),
-            KeyCode::Char(' ') => self.apply_command(Command::AutoPlace),
-            _ => {}
         }
     }
 
@@ -311,10 +308,10 @@ impl App {
                 Location::Stock => self.selected = Location::Tableau(0),
                 Location::Waste => self.selected = Location::Tableau(1),
                 Location::Foundation(index) => self.selected = Location::Tableau(3 + index),
-                Location::Tableau(_) => return,
+                Location::Tableau(_) => (),
             },
             Command::MoveLeft => match self.selected {
-                Location::Stock => return,
+                Location::Stock => (),
                 Location::Waste => self.selected = Location::Stock,
                 Location::Foundation(index) => {
                     if index == 0 {
@@ -324,9 +321,7 @@ impl App {
                     }
                 }
                 Location::Tableau(index) => {
-                    if index == 0 {
-                        return;
-                    } else {
+                    if index != 0 {
                         self.selected = Location::Tableau(index - 1)
                     }
                 }
@@ -335,24 +330,20 @@ impl App {
                 Location::Stock => self.selected = Location::Waste,
                 Location::Waste => self.selected = Location::Foundation(0),
                 Location::Foundation(index) => {
-                    if index == 3 {
-                        return;
-                    } else {
+                    if index != 3 {
                         self.selected = Location::Foundation(index + 1)
                     }
                 }
                 Location::Tableau(index) => {
-                    if index == 6 {
-                        return;
-                    } else {
+                    if index != 6 {
                         self.selected = Location::Tableau(index + 1)
                     }
                 }
             },
             Command::MoveUp => match self.selected {
-                Location::Stock => return,
-                Location::Waste => return,
-                Location::Foundation(_) => return,
+                Location::Stock => (),
+                Location::Waste => (),
+                Location::Foundation(_) => (),
                 Location::Tableau(index) => {
                     if index == 0 {
                         self.selected = Location::Stock

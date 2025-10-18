@@ -13,20 +13,17 @@ impl Foundation {
 
     pub fn get_top_card(&self, location: Location) -> Option<Card> {
         if let Location::Foundation(index) = location {
-            match self.cards[index].last().copied() {
-                Some(card) => card,
-                _ => None,
-            }
+            self.cards[index].last().copied().unwrap_or_default()
         } else {
             None
         }
     }
 
     pub fn get_top_card_by_suit(&self, suit: Suit) -> Option<Card> {
-        match self.cards[get_card_suit_index(suit)].last().copied() {
-            Some(card) => card,
-            _ => None,
-        }
+        self.cards[get_card_suit_index(suit)]
+            .last()
+            .copied()
+            .unwrap_or_default()
     }
 
     pub fn get_top_value(&self, location: Location) -> u8 {
@@ -59,7 +56,7 @@ impl Foundation {
         }
 
         self.cards[card_suit_index].push(Some(card));
-        return true;
+        true
     }
 
     pub fn remove_card(&mut self, location: Location) {

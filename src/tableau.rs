@@ -106,7 +106,7 @@ impl Tableau {
             self.cards[index].push(card);
             return true;
         }
-        return false;
+        false
     }
 
     pub fn get_visible_cards(&self, column: usize) -> Vec<Card> {
@@ -114,15 +114,13 @@ impl Tableau {
     }
 
     pub fn update_cutoffs(&mut self, index: usize) {
-        if index >= self.cutoffs.len() || index >= self.cards.len() {
-            return;
-        }
+        if index < self.cutoffs.len() && index < self.cards.len() {
+            let cutoff = self.cutoffs[index];
+            let card_index = self.cards[index].len() as u8;
 
-        let cutoff = self.cutoffs[index];
-        let card_index = self.cards[index].len() as u8;
-
-        if cutoff > 0 && card_index > 0 && cutoff == card_index - 1 {
-            self.cutoffs[index] -= 1;
+            if cutoff > 0 && card_index > 0 && cutoff == card_index - 1 {
+                self.cutoffs[index] -= 1;
+            }
         }
     }
 
@@ -143,8 +141,6 @@ impl Tableau {
         for card in cards_to_move {
             self.add_card(to, card);
         }
-
-        return;
     }
 
     pub fn try_to_move_between_tableau(&mut self, from: Location, to: Location) {
