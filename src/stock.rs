@@ -11,10 +11,7 @@ impl Stock {
         let mut new_stock = Vec::with_capacity(52);
         for i in 0..=3 {
             for j in 1..=13 {
-                new_stock.push(Card::new(
-                    get_suit_by_card_suit_index(i), // THESE INDEX THINGS NEED TO BE MOVED TO UTILS
-                    j,
-                ));
+                new_stock.push(Card::new(get_suit_by_card_suit_index(i), j));
             }
         }
 

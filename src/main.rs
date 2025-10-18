@@ -47,7 +47,8 @@ struct App {
     stock: Stock,
     waste: Waste,
     tableau: Tableau,
-    foundations: Foundation,
+    foundation: Foundation,
+    won: bool,
 }
 
 impl App {
@@ -60,7 +61,8 @@ impl App {
             stock: Stock::new(),
             waste: Waste::new(),
             tableau: Tableau::new(),
-            foundations: Foundation::new(),
+            foundation: Foundation::new(),
+            won: false,
         }
     }
 
@@ -83,6 +85,7 @@ impl App {
 
             if last_tick.elapsed() >= tick_rate {
                 self.on_tick();
+                self.won = check_win(&self.foundation);
                 last_tick = Instant::now();
             }
         }
@@ -137,7 +140,7 @@ impl App {
 
         if let Location::Foundation(index) = self.selected {
             if self
-                .foundations
+                .foundation
                 .add_card(card, get_suit_by_card_suit_index(index))
             {
                 match self.active {
@@ -159,7 +162,7 @@ impl App {
         let foundation_card = match self.active {
             Some(position) => {
                 active_location = position;
-                match self.foundations.get_top_card(position) {
+                match self.foundation.get_top_card(position) {
                     Some(card) => card,
                     _ => return,
                 }
@@ -168,7 +171,7 @@ impl App {
         };
 
         if self.tableau.add_card(self.selected, foundation_card) {
-            self.foundations.remove_card(active_location);
+            self.foundation.remove_card(active_location);
         }
 
         self.reset_selection();
@@ -199,7 +202,7 @@ impl App {
             _ => return,
         };
 
-        if self.foundations.add_card(card_to_place, card_to_place.suit) {
+        if self.foundation.add_card(card_to_place, card_to_place.suit) {
             match self.selected {
                 Location::Tableau(index) => {
                     self.tableau.update_cutoffs(index);
@@ -233,9 +236,10 @@ impl App {
             &self.tableau,
             &self.stock,
             &self.waste,
-            &self.foundations,
+            &self.foundation,
             self.selected,
             self.active,
+            self.won,
         );
     }
 

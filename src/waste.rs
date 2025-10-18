@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::{card::Card, suit::Suit};
+use crate::card::Card;
 
 pub struct Waste {
     pub cards: Vec<Card>,
@@ -50,6 +50,7 @@ impl Waste {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::suit::Suit;
 
     fn mock_waste() -> Waste {
         Waste::new()

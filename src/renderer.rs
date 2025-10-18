@@ -21,6 +21,7 @@ pub fn render(
     foundations: &Foundation,
     selected: Location,
     active: Option<Location>,
+    won: bool,
 ) {
     let [top, bottom] = vertical.areas(frame.area());
     let [
@@ -43,7 +44,7 @@ pub fn render(
         waste_canvas(Location::Waste, &waste, selected, active),
         waste_rect,
     );
-    frame.render_widget(empty_canvas(), second_empty);
+    frame.render_widget(empty_canvas(won), second_empty);
     frame.render_widget(
         foundation_canvas(Location::Foundation(0), &foundations, selected, active),
         spades,
@@ -184,8 +185,20 @@ fn waste_canvas(
         })
 }
 
-fn empty_canvas() -> impl Widget {
-    Canvas::default().paint(|_ctx| {})
+fn empty_canvas(won: bool) -> impl Widget {
+    Canvas::default()
+        .x_bounds([0.0, 100.0])
+        .y_bounds([0.0, 100.0])
+        .paint(move |ctx| {
+            if won {
+                ctx.layer();
+                ctx.print(
+                    10.0,
+                    50.0,
+                    Span::styled("You win!", Style::default().fg(Color::Magenta)),
+                );
+            }
+        })
 }
 
 fn foundation_canvas(
