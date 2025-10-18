@@ -18,7 +18,7 @@ pub fn render(
     tableau: &Tableau,
     stock: &Stock,
     waste: &Waste,
-    foundations: &Foundation,
+    foundation: &Foundation,
     selected: Location,
     active: Option<Location>,
     won: bool,
@@ -46,19 +46,19 @@ pub fn render(
     );
     frame.render_widget(empty_canvas(won), second_empty);
     frame.render_widget(
-        foundation_canvas(Location::Foundation(0), &foundations, selected, active),
+        foundation_canvas(Location::Foundation(0), &foundation, selected, active),
         spades,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(1), &foundations, selected, active),
+        foundation_canvas(Location::Foundation(1), &foundation, selected, active),
         hearts,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(2), &foundations, selected, active),
+        foundation_canvas(Location::Foundation(2), &foundation, selected, active),
         clubs,
     );
     frame.render_widget(
-        foundation_canvas(Location::Foundation(3), &foundations, selected, active),
+        foundation_canvas(Location::Foundation(3), &foundation, selected, active),
         diamonds,
     );
 
@@ -203,7 +203,7 @@ fn empty_canvas(won: bool) -> impl Widget {
 
 fn foundation_canvas(
     pos: Location,
-    foundations: &Foundation,
+    foundation: &Foundation,
     selected: Location,
     active: Option<Location>,
 ) -> impl Widget {
@@ -214,13 +214,19 @@ fn foundation_canvas(
 
     let card_name = get_card(
         get_suit_by_card_suit_index(suit_index),
-        foundations.get_top_value(pos),
+        foundation.get_top_value(pos),
     );
 
     Canvas::default()
         .block(
             Block::bordered()
-                .title("Foundation")
+                .title(match suit_index {
+                    0 => "Spades",
+                    1 => "Hearts",
+                    2 => "Clubs",
+                    3 => "Diamonds",
+                    _ => "Error",
+                })
                 .border_style(canvas_style(pos, selected, active)),
         )
         .x_bounds([0.0, 100.0])
