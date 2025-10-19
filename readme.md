@@ -30,5 +30,5 @@ After this type **tersoli** into your terminal to launch the game whenever you w
 
 # Technical overview
 
-- Used Ratatui terminal user interface library. 
+- Used [Ratatui](https://ratatui.rs/) terminal user interface library. 
 - Unit tests for the most central logic and mechanics.
