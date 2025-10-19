@@ -96,7 +96,7 @@ impl App {
     }
 
     fn deal_from_stock(&mut self) {
-        if self.stock.cards.is_empty() && !self.waste.cards.is_empty() {
+        if self.stock.cards.is_empty() && self.waste.cards.is_empty() {
             return;
         }
 
